@@ -17,6 +17,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  *
@@ -253,13 +254,13 @@ public class MainFrm extends javax.swing.JFrame {
             streamingSocket = new DatagramSocket(PORT_STREAMING);
             log("[*]Server listening....");
         }catch(IOException ex){
-            log("Server can't start!");
+            log("[#]Error:Server can't start!");
             closeServer();
         }
     }
     
     public void watchDog() {
-        log(Thread.currentThread().getName()+" waiting for commands!");
+        log("..."+Thread.currentThread().getName()+" waiting for commands!");
         while(true){
             try{
                 Socket clientSocket = commandSocket.accept();
@@ -267,31 +268,36 @@ public class MainFrm extends javax.swing.JFrame {
                 OutputStream outputStream = clientSocket.getOutputStream();
                 byte[] buffer = new byte[1024];
                 int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    if(new String(buffer, 0, bytesRead).equals(Command.CONNECT)){
-                        addClient(clientSocket);
-                        outputStream.write("OK\n".getBytes());
+                if ((bytesRead = inputStream.read(buffer)) != -1) {
+                    String requestData = new String(buffer, 0, bytesRead);
+                    if(requestData.startsWith(Command.CONNECT)){
+                        int port = Integer.parseInt(requestData.trim().strip().split("@")[1]);
+                        outputStream.write((Command.OK+"@"+addClient(clientSocket,port)).getBytes());
                     }
                     else{
-                        if(filterRequest(clientSocket)){
-                            new Thread(new ClientHandlerTCP(clientSocket,this)).start();
+                        String command = requestData.trim().strip().split("@")[0];
+                        String idClient = requestData.trim().strip().split("@")[1];
+                        if(filterRequest(clientSocket,idClient)){
+                            new Thread(new ClientHandlerTCP(clientSocket,command,idClient,this)).start();
+                            continue;
                         }
                     } 
                 }
+                clientSocket.close();
             }catch(SocketException ex) {
-                log("Error:" + ex.getMessage() + "from [WatchDog]");
-            }catch(IOException ex){
-                log("Error:" + ex.getMessage() + "from [WatchDog]");
-                log(Thread.currentThread().getName()+" [Closed]");
+                log("[#]Error:" + ex.getMessage() + " from [WatchDog]");
+                log("..."+Thread.currentThread().getName()+" [Closed]");
                 Thread.currentThread().stop();
+            }catch(IOException ex){
+                log("[#]Error:" + ex.getMessage() + " from [WatchDog]");
             }
         }
     }
     
-    private boolean filterRequest(Socket clientSocket){
+    private boolean filterRequest(Socket clientSocket,String idClient){
         return clients.stream()
                 .anyMatch((client) -> (client.getAddr().equals(clientSocket.getInetAddress())
-                        &&client.getPort()==clientSocket.getPort()));
+                        &&client.getId().equals(idClient)));
     }
     
     private void closeServer() {
@@ -314,10 +320,12 @@ public class MainFrm extends javax.swing.JFrame {
         
     }
     
-    public void addClient(Socket clientSocket){
-        clients.add(new Client(1, clientSocket.getInetAddress(), clientSocket.getPort()));
+    public String addClient(Socket clientSocket,int portUDPClient){
+        String id = UUID.randomUUID().toString();
+        clients.add(new Client(id, clientSocket.getInetAddress(), portUDPClient));
         this.lbClients.setText(Integer.toString(clients.size()));
-        log("["+clientSocket.getInetAddress()+"]["+clientSocket.getPort()+"] connected!");
+        log("["+clientSocket.getInetAddress()+"]["+portUDPClient+"] connected!");
+        return id;
     }
     
     public void log(String log){

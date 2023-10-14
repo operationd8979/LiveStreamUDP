@@ -13,17 +13,17 @@ import java.net.InetAddress;
  */
 public class Client {
     
-    private final long id;
+    private final String id;
     private final InetAddress addr;
     private final int port;
     
-    public Client(long id, InetAddress addr, int port){
+    public Client(String id, InetAddress addr, int port){
         this.id = id;
         this.addr = addr;
         this.port = port;
     }
     
-    public long getId(){
+    public String getId(){
         return this.id;
     }
     
@@ -35,5 +35,9 @@ public class Client {
         return this.port;
     }
     
+    @Override
+    public String toString(){
+        return this.getAddr()+" "+this.getPort();
+    }
     
 }

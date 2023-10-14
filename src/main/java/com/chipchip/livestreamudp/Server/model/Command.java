@@ -15,4 +15,7 @@ public class Command {
     public final static String EXIST = "EXIST";
     public final static String UNKNOW_COMMAND = "UNKNOW COMMAND";
     
+    public final static String OK = "OK";
+    public final static String ERROR = "ERROR";
+    
 }

@@ -5,6 +5,7 @@
  */
 package com.chipchip.livestreamudp.Client;
 
+import com.chipchip.livestreamudp.Server.model.Command;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +37,7 @@ public class ClientFrm extends javax.swing.JFrame {
     
     private boolean running = false;
     
+    private String idClinet = "FFFFFFF";
     private DatagramSocket UDPSocket = null;
     private int portUDP = -1;
     
@@ -48,8 +50,23 @@ public class ClientFrm extends javax.swing.JFrame {
     }
     
     public final void initFrm(){
+        try{
+            if(UDPSocket!=null){
+                UDPSocket.close();
+                UDPSocket = null;
+            }
+            this.portUDP = -1;
+        }catch(Exception ex){
+            JOptionPane.showMessageDialog(null, ex.getMessage());
+        }
         this.running = false;
+        this.idClinet = "FFFFFFF";
+        this.txtID.setText(idClinet);
+        this.txtName.setEditable(!running);
         this.btnLive.setEnabled(running);
+        this.lbState.setText(OFFLINE);
+        this.btnAction.setText(CONNECT);
+        this.txtID.setText(idClinet); 
     }
 
     /**
@@ -66,6 +83,7 @@ public class ClientFrm extends javax.swing.JFrame {
         lbState = new javax.swing.JLabel();
         pLiveStream = new javax.swing.JPanel();
         btnLive = new javax.swing.JButton();
+        txtID = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -97,20 +115,24 @@ public class ClientFrm extends javax.swing.JFrame {
         btnLive.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         btnLive.setText("LiveStream");
 
+        txtID.setEditable(false);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
                         .addGap(23, 23, 23)
                         .addComponent(lbState)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(txtID, javax.swing.GroupLayout.PREFERRED_SIZE, 376, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
                         .addComponent(txtName, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(btnAction))
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                    .addGroup(layout.createSequentialGroup()
                         .addContainerGap(14, Short.MAX_VALUE)
                         .addComponent(pLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
@@ -126,7 +148,8 @@ public class ClientFrm extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnAction)
                     .addComponent(txtName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(lbState))
+                    .addComponent(lbState)
+                    .addComponent(txtID, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(pLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 23, Short.MAX_VALUE)
@@ -149,20 +172,29 @@ public class ClientFrm extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_btnActionActionPerformed
 
-    public boolean connectTCPToServer() {
+    public String sendRequest(String content) {
         Socket socket = null;
         try{
             socket = new Socket(IPServer, portTCPServer);
             OutputStream outputStream = socket.getOutputStream();
-            outputStream.write("CONNECT".getBytes());
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            String response = reader.readLine();
-            if(response.equals("OK")){
-                socket.close();
-                return true;
+            if(!content.equals(Command.CONNECT)){
+                if(idClinet==null){
+                    return "idNULL";
+                }
+                content+="@"+idClinet;
             }
-            socket.close();
-            return false;
+            outputStream.write(content.getBytes());
+            //////////////////////////////////
+            System.out.println("Đã gửi xong: "+ content);
+            //////////////////////////////////
+            InputStream inputStream = socket.getInputStream();
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                socket.close();
+                return new String(buffer, 0, bytesRead);
+            }
+            return "";
         }catch(IOException ex){
             JOptionPane.showMessageDialog(null, ex.getMessage());
             if(socket!=null){
@@ -170,9 +202,36 @@ public class ClientFrm extends javax.swing.JFrame {
                     socket.close();
                 }catch(Exception e){}
             }
-            return false;
+            return "";
         }
     }
+    
+    
+//    public boolean connectTCPToServer() {
+//        Socket socket = null;
+//        try{
+//            socket = new Socket(IPServer, portTCPServer);
+//            OutputStream outputStream = socket.getOutputStream();
+//            outputStream.write("CONNECT".getBytes());
+//            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+//            String response = reader.readLine();
+//            if(response.equals("OK")){
+//                socket.close();
+//                return true;
+//            }
+//            socket.close();
+//            return false;
+//        }catch(IOException ex){
+//            JOptionPane.showMessageDialog(null, ex.getMessage());
+//            if(socket!=null){
+//                try{
+//                    socket.close();
+//                }catch(Exception e){}
+//            }
+//            return false;
+//        }
+//    }
+    
     
     public DatagramSocket openSocketUDP() {
         int i = 15000;
@@ -193,28 +252,35 @@ public class ClientFrm extends javax.swing.JFrame {
     public void connect(){
         this.btnAction.setText(CONNECTING);
         this.running = true;
-        if(!connectTCPToServer()){
-            disconnect();
+        UDPSocket = openSocketUDP();
+        if(UDPSocket==null){
+            initFrm();
             return;
         }
-//            tcpThread = new Thread(this::watchDog);
-//            tcpThread.setName("WatchDog_Thread");
-//            tcpThread.start();
-        UDPSocket = openSocketUDP();
+        String responseTCP = sendRequest(Command.CONNECT+"@"+UDPSocket.getPort());
+        if(!responseTCP.startsWith("OK")){
+            initFrm();
+            return;
+        }
+        this.idClinet = responseTCP.trim().strip().split("@")[1];
         this.txtName.setEditable(!running);
         this.btnLive.setEnabled(running);
         this.lbState.setText(ONLINE);
         this.btnAction.setText(DISCONECT);
-        if(UDPSocket==null){
-            disconnect();
-            return;
-        }
         portUDP = UDPSocket.getPort();
+        this.txtID.setText(idClinet);
     }
     
     private void disconnect() {
         this.running = false;
         try{
+            String response = sendRequest(Command.EXIST);
+            if(!response.equals("OK")){
+                //Server error response disconnect!
+                //////////////////////////
+//                System.out.println("Error: "+response);
+                //////////////////////////
+            }
             if(UDPSocket!=null){
                 UDPSocket.close();
                 UDPSocket = null;
@@ -224,6 +290,8 @@ public class ClientFrm extends javax.swing.JFrame {
             this.lbState.setText(OFFLINE);
             this.btnAction.setText(CONNECT);
             this.portUDP = -1;
+            this.idClinet = "FFFFFFF";
+            this.txtID.setText(idClinet);
         }catch(Exception ex){
             JOptionPane.showMessageDialog(null, ex.getMessage());
         }
@@ -269,6 +337,7 @@ public class ClientFrm extends javax.swing.JFrame {
     private javax.swing.JButton btnLive;
     private javax.swing.JLabel lbState;
     private javax.swing.JPanel pLiveStream;
+    private javax.swing.JTextField txtID;
     private javax.swing.JTextField txtName;
     // End of variables declaration//GEN-END:variables
 }
