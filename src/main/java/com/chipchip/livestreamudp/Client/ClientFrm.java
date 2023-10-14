@@ -24,9 +24,9 @@ import javax.swing.JOptionPane;
  */
 public class ClientFrm extends javax.swing.JFrame {
     
-    private final String IPServer = "localhost";
-    private final int portTCPServer = 12345;
-    private final int portUDPServer = 12346;
+    public static final String IPServer = "localhost";
+    public static final int portTCPServer = 12345;
+    public static final int portUDPServer = 12346;
 
     private static String CONNECT = "Connect";
     private static String CONNECTING = "Connecting";
@@ -86,6 +86,11 @@ public class ClientFrm extends javax.swing.JFrame {
         txtID = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent evt) {
+                formWindowClosing(evt);
+            }
+        });
 
         btnAction.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         btnAction.setText("Connect");
@@ -114,6 +119,11 @@ public class ClientFrm extends javax.swing.JFrame {
 
         btnLive.setFont(new java.awt.Font("Tahoma", 0, 14)); // NOI18N
         btnLive.setText("LiveStream");
+        btnLive.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnLiveActionPerformed(evt);
+            }
+        });
 
         txtID.setEditable(false);
 
@@ -172,6 +182,21 @@ public class ClientFrm extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_btnActionActionPerformed
 
+    private void btnLiveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLiveActionPerformed
+        // TODO add your handling code here:
+        if(this.sendRequest(Command.LIVE).equals(Command.OK)){
+            this.setVisible(false);
+            new LiveStreamFrm(this).setVisible(true);
+        }
+    }//GEN-LAST:event_btnLiveActionPerformed
+
+    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
+        // TODO add your handling code here:
+        if(running){
+            disconnect();
+        }
+    }//GEN-LAST:event_formWindowClosing
+
     public String sendRequest(String content) {
         Socket socket = null;
         try{
@@ -182,6 +207,13 @@ public class ClientFrm extends javax.swing.JFrame {
                     return "idNULL";
                 }
                 content+="@"+idClinet;
+            }
+            if(content.startsWith(Command.LIVE)||content.startsWith(Command.OFFSTREAM)){
+                String name = this.txtName.getText();
+                if(name==""||name==null){
+                    return "nameNull";
+                }
+                content+="@"+name;
             }
             outputStream.write(content.getBytes());
             //////////////////////////////////
@@ -205,32 +237,6 @@ public class ClientFrm extends javax.swing.JFrame {
             return "";
         }
     }
-    
-    
-//    public boolean connectTCPToServer() {
-//        Socket socket = null;
-//        try{
-//            socket = new Socket(IPServer, portTCPServer);
-//            OutputStream outputStream = socket.getOutputStream();
-//            outputStream.write("CONNECT".getBytes());
-//            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-//            String response = reader.readLine();
-//            if(response.equals("OK")){
-//                socket.close();
-//                return true;
-//            }
-//            socket.close();
-//            return false;
-//        }catch(IOException ex){
-//            JOptionPane.showMessageDialog(null, ex.getMessage());
-//            if(socket!=null){
-//                try{
-//                    socket.close();
-//                }catch(Exception e){}
-//            }
-//            return false;
-//        }
-//    }
     
     
     public DatagramSocket openSocketUDP() {
@@ -257,7 +263,7 @@ public class ClientFrm extends javax.swing.JFrame {
             initFrm();
             return;
         }
-        String responseTCP = sendRequest(Command.CONNECT+"@"+UDPSocket.getPort());
+        String responseTCP = sendRequest(Command.CONNECT+"@"+UDPSocket.getLocalPort());
         if(!responseTCP.startsWith("OK")){
             initFrm();
             return;
@@ -267,7 +273,7 @@ public class ClientFrm extends javax.swing.JFrame {
         this.btnLive.setEnabled(running);
         this.lbState.setText(ONLINE);
         this.btnAction.setText(DISCONECT);
-        portUDP = UDPSocket.getPort();
+        portUDP = UDPSocket.getLocalPort();
         this.txtID.setText(idClinet);
     }
     
@@ -295,6 +301,10 @@ public class ClientFrm extends javax.swing.JFrame {
         }catch(Exception ex){
             JOptionPane.showMessageDialog(null, ex.getMessage());
         }
+    }
+    
+    public DatagramSocket getUDPSocket(){
+        return this.UDPSocket;
     }
     
     /**

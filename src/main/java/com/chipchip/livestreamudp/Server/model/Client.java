@@ -37,7 +37,7 @@ public class Client {
     
     @Override
     public String toString(){
-        return this.getAddr()+" "+this.getPort();
+        return this.getId()+" "+this.getAddr()+" "+this.getPort();
     }
     
 }

@@ -12,6 +12,8 @@ package com.chipchip.livestreamudp.Server.model;
 public class Command {
     
     public final static String CONNECT = "CONNECT";
+    public final static String LIVE = "LIVE";
+    public final static String OFFSTREAM = "OFFSTREAM";
     public final static String EXIST = "EXIST";
     public final static String UNKNOW_COMMAND = "UNKNOW COMMAND";
     

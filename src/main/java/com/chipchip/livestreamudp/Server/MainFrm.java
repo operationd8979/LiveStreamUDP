@@ -5,12 +5,22 @@
  */
 package com.chipchip.livestreamudp.Server;
 
+import com.chipchip.livestreamudp.Client.LiveStreamFrm;
 import com.chipchip.livestreamudp.Server.model.Client;
 import com.chipchip.livestreamudp.Server.model.ClientHandlerTCP;
 import com.chipchip.livestreamudp.Server.model.Command;
+import com.chipchip.livestreamudp.Server.model.StreamGroup;
+import java.awt.Button;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -18,6 +28,9 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import javax.imageio.ImageIO;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -29,19 +42,45 @@ public class MainFrm extends javax.swing.JFrame {
     private static int PORT_STREAMING = 12346;
     private ServerSocket commandSocket = null;
     private DatagramSocket streamingSocket = null;
-    public static List<Client> clients = new ArrayList<>();
+    public static List<Client> clients = null;
+    public static List<StreamGroup> streamers = null;
     private boolean running = false;
     
     private static String START_SERVER = "Start Server";
     private static String STOP_SERVER = "Stop Server";
     
-    Thread tcpThread = null;
+    ByteArrayInputStream byteArrayInputStream = null;
+    ByteArrayOutputStream byteArrayOutputStream = null;
+    DatagramPacket sendPacket = null;
+    DatagramPacket recivePacket = null;
+    static byte[] imageData = new byte[65507];
+    
+    private Thread tcpThread = null;
+    private Thread udpThread = null;
     
     public void initServer(){
+        if(tcpThread!=null){
+            if(tcpThread.isAlive()){
+                tcpThread.stop();
+                tcpThread = null;
+            }
+        }
+        if(udpThread!=null){
+            if(udpThread.isAlive()){
+                udpThread.stop();
+                udpThread = null;
+            }
+        }
         commandSocket = null;
         streamingSocket = null;
         clients = new ArrayList<>();
+        streamers = new ArrayList<>();
         running = false;
+        this.lbClients.setText("0");
+        this.lbDownload.setText("0");
+        this.lbUpload.setText("0");
+        this.lbLineD.setText("0");
+        this.lbLineU.setText("0");
     }
 
     /**
@@ -49,6 +88,8 @@ public class MainFrm extends javax.swing.JFrame {
      */
     public MainFrm() {
         initComponents();
+        this.pnLiveStream.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        initServer();
     }
 
     /**
@@ -79,6 +120,11 @@ public class MainFrm extends javax.swing.JFrame {
         pnLiveStream = new javax.swing.JPanel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent evt) {
+                formWindowClosing(evt);
+            }
+        });
 
         btnAction.setFont(new java.awt.Font("Tahoma", 0, 15)); // NOI18N
         btnAction.setText("Start Server");
@@ -241,6 +287,11 @@ public class MainFrm extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_btnActionActionPerformed
 
+    private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
+        // TODO add your handling code here:
+        this.closeServer();
+    }//GEN-LAST:event_formWindowClosing
+
     //FUNTION
     private void enableServer() {
         initServer();
@@ -252,6 +303,9 @@ public class MainFrm extends javax.swing.JFrame {
             tcpThread.setName("WatchDog_Thread");
             tcpThread.start();
             streamingSocket = new DatagramSocket(PORT_STREAMING);
+            udpThread = new Thread(this::watchCat);
+            udpThread.setName("WatchCat_Thread");
+            udpThread.start();
             log("[*]Server listening....");
         }catch(IOException ex){
             log("[#]Error:Server can't start!");
@@ -275,11 +329,21 @@ public class MainFrm extends javax.swing.JFrame {
                         outputStream.write((Command.OK+"@"+addClient(clientSocket,port)).getBytes());
                     }
                     else{
-                        String command = requestData.trim().strip().split("@")[0];
-                        String idClient = requestData.trim().strip().split("@")[1];
-                        if(filterRequest(clientSocket,idClient)){
-                            new Thread(new ClientHandlerTCP(clientSocket,command,idClient,this)).start();
-                            continue;
+                        try{
+                            String[] arrayString = requestData.trim().strip().split("@");
+                            for(String s:arrayString){
+                                System.out.println(s);
+                            }
+                            String command = arrayString[0];
+                            String idClient = arrayString[1];
+                            String nameClient = arrayString.length>=3?arrayString[2]:"";
+                            if(filterRequest(clientSocket,idClient)){
+                                new Thread(new ClientHandlerTCP(clientSocket,command,idClient,nameClient,this)).start();
+                                continue;
+                            }
+                        }catch(Exception ex){
+                            log("[#]Error:" + ex.getMessage() + " from [WatchDog]");
+                            outputStream.write(Command.UNKNOW_COMMAND.getBytes());
                         }
                     } 
                 }
@@ -294,6 +358,31 @@ public class MainFrm extends javax.swing.JFrame {
         }
     }
     
+    public void watchCat() {
+        log("..."+Thread.currentThread().getName()+" waiting for Streaming!");
+        recivePacket = new DatagramPacket(imageData, imageData.length);
+        while(true){
+            try{
+                this.streamingSocket.receive(recivePacket);
+                for(StreamGroup group: streamers){
+                    if(group.getHost().getAddr().equals(recivePacket.getAddress())){
+                        if(group.getHost().getPort()==recivePacket.getPort()){
+                            byteArrayInputStream = new ByteArrayInputStream(recivePacket.getData());
+                            group.setCurrentImage(ImageIO.read(byteArrayInputStream));
+                        }
+                    }
+                    
+                }
+            }catch(SocketException ex) {
+                log("[#]Error:" + ex.getMessage() + " from [WatchCat]");
+                log("..."+Thread.currentThread().getName()+" [Closed]");
+                Thread.currentThread().stop();
+            }catch(IOException ex){
+                log("[#]Error:" + ex.getMessage() + " from [WatchCat]");
+            }
+        }
+    }
+    
     private boolean filterRequest(Socket clientSocket,String idClient){
         return clients.stream()
                 .anyMatch((client) -> (client.getAddr().equals(clientSocket.getInetAddress())
@@ -303,6 +392,7 @@ public class MainFrm extends javax.swing.JFrame {
     private void closeServer() {
         this.running = false;
         clients = null;
+        streamers = null;
         this.btnAction.setText(START_SERVER);
         try{
             if(commandSocket!=null){
@@ -326,6 +416,76 @@ public class MainFrm extends javax.swing.JFrame {
         this.lbClients.setText(Integer.toString(clients.size()));
         log("["+clientSocket.getInetAddress()+"]["+portUDPClient+"] connected!");
         return id;
+    }
+    
+    private void refreshLiveStreamPanel(){
+        for(StreamGroup sg : streamers){
+            boolean alreadyAdded = false;
+            String nameButton = sg.getName()+sg.getHost().getId();
+            for (Component component : pnLiveStream.getComponents()) {
+                if (component instanceof Button && component.getName() != null && component.getName().equals(nameButton)) {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+            if(!alreadyAdded){
+                Button button = new Button();
+                button.setName(nameButton);
+                button.setLabel(sg.getName());
+                MainFrm mainFrmRef = this;
+                button.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        mainFrmRef.setVisible(false);
+                        new StreamingFrm(mainFrmRef,sg).setVisible(true);
+                    }
+                });
+                this.pnLiveStream.add(button);
+            }
+        }
+        this.pnLiveStream.revalidate();
+        this.pnLiveStream.repaint();
+    }
+    
+    private void removeButton(String buttonName) {
+        for (Component component : pnLiveStream.getComponents()) {
+            if (component instanceof Button && component.getName() != null && component.getName().equals(buttonName)) {
+                pnLiveStream.remove(component);
+                pnLiveStream.revalidate();
+                pnLiveStream.repaint();
+                break; // Bạn có thể xóa nhiều button có cùng tên, nếu muốn xóa toàn bộ, loại bỏ break.
+            }
+        }
+    }
+    
+    private String informationClient(String id){
+        return "["+id.substring(0, 10)+"...]";
+    }
+    
+    public int logoutClient(String clientId){
+        MainFrm.clients = MainFrm.clients.stream()
+                            .filter(c->!c.getId().equals(clientId))
+                                .collect(Collectors.toList());
+        log(this.informationClient(clientId)+ "disconnected!");
+        this.lbClients.setText(Integer.toString(clients.size()));
+        return 1;
+    }
+    
+    public int addLiveGroup(String clientId,String name){
+        Client host = this.clients.stream().filter(p->p.getId().equals(clientId)).findFirst().orElse(null);
+        this.streamers.add(new StreamGroup(host,name));
+        this.refreshLiveStreamPanel();
+        log(this.informationClient(clientId)+ "opened live!");
+        return 1;
+    }
+    
+    public int removeLiveGroup(String clientId,String name){
+        String buttonName = name+clientId;
+        this.streamers = MainFrm.streamers.stream()
+                .filter(c->!c.getHost().getId().equals(clientId)).collect(Collectors.toList());
+        this.removeButton(buttonName);
+        log(this.informationClient(clientId)+ "offed stream!");
+        return 1;
     }
     
     public void log(String log){

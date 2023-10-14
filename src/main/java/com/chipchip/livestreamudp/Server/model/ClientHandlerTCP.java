@@ -21,17 +21,19 @@ public class ClientHandlerTCP implements Runnable {
     private MainFrm mainFrm;
     private String idClient;
     private String commnad;
-    private Socket clinetSocket;
+    private Socket clientSocket;
+    private String nameClient;
 
-    public ClientHandlerTCP(Socket clinetSocket,String commnad,String idClient,MainFrm mainFrm) {
+    public ClientHandlerTCP(Socket clientSocket,String commnad,String idClient,String nameClient,MainFrm mainFrm) {
         this.idClient = idClient;
         this.mainFrm = mainFrm;
         this.commnad = commnad;
-        this.clinetSocket = clinetSocket;
+        this.clientSocket = clientSocket;
+        this.nameClient = nameClient;
     }
     
     public String informationClient(){
-        return "["+this.idClient+"]";
+        return "["+this.idClient.substring(0, 10)+"...]";
     }
     
     private boolean equalToClient(Client client){
@@ -42,19 +44,24 @@ public class ClientHandlerTCP implements Runnable {
     public void run() {
         try {
             // Xử lý dữ liệu từ khách hàng (ở đây là một ví dụ đơn giản)   
-            OutputStream outputStream = this.clinetSocket.getOutputStream();
+            OutputStream outputStream = this.clientSocket.getOutputStream();
             switch(this.commnad){
                 case Command.EXIST:
-                    MainFrm.clients = MainFrm.clients.stream()
-                            .filter(c->!this.equalToClient(c)).collect(Collectors.toList());
+                    this.mainFrm.logoutClient(this.idClient);
                     outputStream.write(Command.OK.getBytes());
-                    mainFrm.log(this.informationClient()+ "disconnected!");
+                    break;
+                case Command.LIVE:
+                    this.mainFrm.addLiveGroup(this.idClient, this.nameClient);
+                    outputStream.write(Command.OK.getBytes());
+                    break;
+                case Command.OFFSTREAM:
+                    this.mainFrm.removeLiveGroup(this.idClient,this.nameClient);
+                    outputStream.write(Command.OK.getBytes());
                     break;
                 default:
-                    mainFrm.log(this.informationClient()+ "call unknow command!");
                     outputStream.write(Command.UNKNOW_COMMAND.getBytes());     
             }
-            this.clinetSocket.close();
+            this.clientSocket.close();
         } catch (IOException ex) {
             ex.printStackTrace();
         }
