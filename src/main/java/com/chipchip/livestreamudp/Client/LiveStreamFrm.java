@@ -149,7 +149,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
         // TODO add your handling code here:
         this.running = false;
-        this.clientFrm.sendRequest(Command.OFFSTREAM);
+        this.clientFrm.sendGetRequest(Command.OFF_STREAM);
         this.dispose();
     }//GEN-LAST:event_formWindowClosing
 

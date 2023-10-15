@@ -13,6 +13,7 @@ import com.chipchip.livestreamudp.Server.model.StreamGroup;
 import java.awt.Button;
 import java.awt.Component;
 import java.awt.FlowLayout;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.ByteArrayInputStream;
@@ -30,7 +31,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
 /**
  *
@@ -76,6 +80,7 @@ public class MainFrm extends javax.swing.JFrame {
         clients = new ArrayList<>();
         streamers = new ArrayList<>();
         running = false;
+        removeAllButton();
         this.lbClients.setText("0");
         this.lbDownload.setText("0");
         this.lbUpload.setText("0");
@@ -313,7 +318,7 @@ public class MainFrm extends javax.swing.JFrame {
         }
     }
     
-    public void watchDog() {
+    private void watchDog() {
         log("..."+Thread.currentThread().getName()+" waiting for commands!");
         while(true){
             try{
@@ -358,7 +363,7 @@ public class MainFrm extends javax.swing.JFrame {
         }
     }
     
-    public void watchCat() {
+    private void watchCat() {
         log("..."+Thread.currentThread().getName()+" waiting for Streaming!");
         recivePacket = new DatagramPacket(imageData, imageData.length);
         while(true){
@@ -407,7 +412,6 @@ public class MainFrm extends javax.swing.JFrame {
         }catch(IOException ex){
             log(ex.getMessage());
         }
-        
     }
     
     public String addClient(Socket clientSocket,int portUDPClient){
@@ -421,16 +425,15 @@ public class MainFrm extends javax.swing.JFrame {
     private void refreshLiveStreamPanel(){
         for(StreamGroup sg : streamers){
             boolean alreadyAdded = false;
-            String nameButton = sg.getName()+sg.getHost().getId();
+            String IDLive = sg.getHost().getId();
             for (Component component : pnLiveStream.getComponents()) {
-                if (component instanceof Button && component.getName() != null && component.getName().equals(nameButton)) {
+                if (component instanceof JPanel && component.getName() != null && component.getName().equals(IDLive)) {
                     alreadyAdded = true;
                     break;
                 }
             }
             if(!alreadyAdded){
                 Button button = new Button();
-                button.setName(nameButton);
                 button.setLabel(sg.getName());
                 MainFrm mainFrmRef = this;
                 button.addActionListener(new ActionListener() {
@@ -440,20 +443,39 @@ public class MainFrm extends javax.swing.JFrame {
                         new StreamingFrm(mainFrmRef,sg).setVisible(true);
                     }
                 });
-                this.pnLiveStream.add(button);
+                ImageIcon originalIcon = new ImageIcon(sg.getCurrentImage());
+                Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                ImageIcon scaledIcon = new ImageIcon(scaledImage);
+                JLabel liveGroup = new JLabel(scaledIcon);
+                JPanel panelPanel = new JPanel();
+                panelPanel.setName(IDLive);
+                panelPanel.add(liveGroup);
+                panelPanel.add(button);
+                this.pnLiveStream.add(panelPanel);
+//                this.pnLiveStream.add(button);
             }
         }
         this.pnLiveStream.revalidate();
         this.pnLiveStream.repaint();
     }
     
-    private void removeButton(String buttonName) {
+    private void removeLiveNode(String IDLive) {
         for (Component component : pnLiveStream.getComponents()) {
-            if (component instanceof Button && component.getName() != null && component.getName().equals(buttonName)) {
+            if (component instanceof JPanel && component.getName() != null && component.getName().equals(IDLive)) {
                 pnLiveStream.remove(component);
                 pnLiveStream.revalidate();
                 pnLiveStream.repaint();
                 break; // Bạn có thể xóa nhiều button có cùng tên, nếu muốn xóa toàn bộ, loại bỏ break.
+            }
+        }
+    }
+    
+    private void removeAllButton () {
+        for (Component component : pnLiveStream.getComponents()) {
+            if (component instanceof JPanel && component.getName() != null) {
+                pnLiveStream.remove(component);
+                pnLiveStream.revalidate();
+                pnLiveStream.repaint();
             }
         }
     }
@@ -473,17 +495,59 @@ public class MainFrm extends javax.swing.JFrame {
     
     public int addLiveGroup(String clientId,String name){
         Client host = this.clients.stream().filter(p->p.getId().equals(clientId)).findFirst().orElse(null);
-        this.streamers.add(new StreamGroup(host,name));
-        this.refreshLiveStreamPanel();
+        StreamGroup newHost = new StreamGroup(host,name);
+        this.streamers.add(newHost);
+        
+        Runnable addButtonTask = () -> addButton(newHost);
+        Thread addButtonThread = new Thread(addButtonTask);
+        addButtonThread.setName("[AddLive]"+name);
+        addButtonThread.start();
+        
+//        this.refreshLiveStreamPanel();
         log(this.informationClient(clientId)+ "opened live!");
         return 1;
     }
     
+    public void addButton(StreamGroup newHost){
+        while(newHost.getCurrentImage()==null){
+            try{
+                System.out.println("NOT DATA IMAGE");
+                Thread.sleep(1000);
+            }catch(InterruptedException ex){
+                log(ex.getMessage()+" from " + Thread.currentThread().getName());
+            }
+        }
+        String StreamID = newHost.getHost().getId();
+        Button button = new Button();
+        button.setName(StreamID);
+        button.setLabel(newHost.getName());
+        MainFrm mainFrmRef = this;
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mainFrmRef.setVisible(false);
+                new StreamingFrm(mainFrmRef,newHost).setVisible(true);
+            }
+        });
+        ImageIcon originalIcon = new ImageIcon(newHost.getCurrentImage());
+        Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+        ImageIcon scaledIcon = new ImageIcon(scaledImage);
+        JLabel liveGroup = new JLabel(scaledIcon);
+        
+        JPanel labelPanel = new JPanel();
+        labelPanel.add(liveGroup);
+        labelPanel.add(button);
+        labelPanel.setName(StreamID);
+        this.pnLiveStream.add(labelPanel);
+//                this.pnLiveStream.add(button);
+        this.pnLiveStream.revalidate();
+        this.pnLiveStream.repaint();
+    }
+    
     public int removeLiveGroup(String clientId,String name){
-        String buttonName = name+clientId;
         this.streamers = MainFrm.streamers.stream()
                 .filter(c->!c.getHost().getId().equals(clientId)).collect(Collectors.toList());
-        this.removeButton(buttonName);
+        this.removeLiveNode(clientId);
         log(this.informationClient(clientId)+ "offed stream!");
         return 1;
     }

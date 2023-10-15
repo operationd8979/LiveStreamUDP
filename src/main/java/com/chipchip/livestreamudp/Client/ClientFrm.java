@@ -6,16 +6,25 @@
 package com.chipchip.livestreamudp.Client;
 
 import com.chipchip.livestreamudp.Server.model.Command;
+import com.chipchip.livestreamudp.Server.model.ResponseListGroupLive;
+import com.chipchip.livestreamudp.Server.model.StreamGroup;
+import java.awt.Button;
+import java.awt.Component;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.List;
 import javax.swing.JOptionPane;
 
 /**
@@ -36,10 +45,10 @@ public class ClientFrm extends javax.swing.JFrame {
     
     
     private boolean running = false;
-    
     private String idClinet = "FFFFFFF";
     private DatagramSocket UDPSocket = null;
     private int portUDP = -1;
+    private ResponseListGroupLive responseListGroupLive = null;
     
     /**
      * Creates new form ClientFrm
@@ -81,7 +90,7 @@ public class ClientFrm extends javax.swing.JFrame {
         btnAction = new javax.swing.JButton();
         txtName = new javax.swing.JTextField();
         lbState = new javax.swing.JLabel();
-        pLiveStream = new javax.swing.JPanel();
+        pnLiveStream = new javax.swing.JPanel();
         btnLive = new javax.swing.JButton();
         txtID = new javax.swing.JTextField();
 
@@ -106,14 +115,14 @@ public class ClientFrm extends javax.swing.JFrame {
         lbState.setForeground(new java.awt.Color(200, 0, 0));
         lbState.setText("OFFLINE");
 
-        javax.swing.GroupLayout pLiveStreamLayout = new javax.swing.GroupLayout(pLiveStream);
-        pLiveStream.setLayout(pLiveStreamLayout);
-        pLiveStreamLayout.setHorizontalGroup(
-            pLiveStreamLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        javax.swing.GroupLayout pnLiveStreamLayout = new javax.swing.GroupLayout(pnLiveStream);
+        pnLiveStream.setLayout(pnLiveStreamLayout);
+        pnLiveStreamLayout.setHorizontalGroup(
+            pnLiveStreamLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 699, Short.MAX_VALUE)
         );
-        pLiveStreamLayout.setVerticalGroup(
-            pLiveStreamLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        pnLiveStreamLayout.setVerticalGroup(
+            pnLiveStreamLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGap(0, 308, Short.MAX_VALUE)
         );
 
@@ -144,7 +153,7 @@ public class ClientFrm extends javax.swing.JFrame {
                         .addComponent(btnAction))
                     .addGroup(layout.createSequentialGroup()
                         .addContainerGap(14, Short.MAX_VALUE)
-                        .addComponent(pLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(pnLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
             .addGroup(layout.createSequentialGroup()
                 .addGap(303, 303, 303)
@@ -161,7 +170,7 @@ public class ClientFrm extends javax.swing.JFrame {
                     .addComponent(lbState)
                     .addComponent(txtID, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(pLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(pnLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 23, Short.MAX_VALUE)
                 .addComponent(btnLive)
                 .addContainerGap())
@@ -175,6 +184,7 @@ public class ClientFrm extends javax.swing.JFrame {
         if(this.btnAction.getText().equals(CONNECT)){
             if(!txtName.getText().equals("")&&txtName.getText()!=null){
                 connect();
+//                refreshLiveList();
             }
         }
         else{
@@ -184,7 +194,7 @@ public class ClientFrm extends javax.swing.JFrame {
 
     private void btnLiveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLiveActionPerformed
         // TODO add your handling code here:
-        if(this.sendRequest(Command.LIVE).equals(Command.OK)){
+        if(this.sendGetRequest(Command.LIVE).equals(Command.OK)){
             this.setVisible(false);
             new LiveStreamFrm(this).setVisible(true);
         }
@@ -197,7 +207,7 @@ public class ClientFrm extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_formWindowClosing
 
-    public String sendRequest(String content) {
+    public String sendGetRequest(String content) {
         Socket socket = null;
         try{
             socket = new Socket(IPServer, portTCPServer);
@@ -208,9 +218,9 @@ public class ClientFrm extends javax.swing.JFrame {
                 }
                 content+="@"+idClinet;
             }
-            if(content.startsWith(Command.LIVE)||content.startsWith(Command.OFFSTREAM)){
+            if(content.startsWith(Command.LIVE)||content.startsWith(Command.OFF_STREAM)){
                 String name = this.txtName.getText();
-                if(name==""||name==null){
+                if(name.equals("")){
                     return "nameNull";
                 }
                 content+="@"+name;
@@ -235,6 +245,41 @@ public class ClientFrm extends javax.swing.JFrame {
                 }catch(Exception e){}
             }
             return "";
+        }
+    }
+    
+    public ResponseListGroupLive sendPostRequest(String content) {
+        Socket socket = null;
+        try{
+            socket = new Socket(IPServer, portTCPServer);
+            OutputStream outputStream = socket.getOutputStream();
+            if(!content.equals(Command.CONNECT)){
+                if(idClinet==null){
+                    return null;
+                }
+                content+="@"+idClinet;
+            }
+            outputStream.write(content.getBytes());
+            //////////////////////////////////
+            System.out.println("Đã gửi xong: "+ content);
+            //////////////////////////////////
+            InputStream inputStream = socket.getInputStream();
+            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+            try{
+                ResponseListGroupLive response = (ResponseListGroupLive) objectInputStream.readObject();
+                return response;
+            }catch(ClassNotFoundException ex){
+                JOptionPane.showMessageDialog(null, ex.getMessage());
+                return null;
+            }
+        }catch(IOException ex){
+            JOptionPane.showMessageDialog(null, ex.getMessage());
+            if(socket!=null){
+                try{
+                    socket.close();
+                }catch(Exception e){}
+            }
+            return null;
         }
     }
     
@@ -263,7 +308,7 @@ public class ClientFrm extends javax.swing.JFrame {
             initFrm();
             return;
         }
-        String responseTCP = sendRequest(Command.CONNECT+"@"+UDPSocket.getLocalPort());
+        String responseTCP = sendGetRequest(Command.CONNECT+"@"+UDPSocket.getLocalPort());
         if(!responseTCP.startsWith("OK")){
             initFrm();
             return;
@@ -280,7 +325,7 @@ public class ClientFrm extends javax.swing.JFrame {
     private void disconnect() {
         this.running = false;
         try{
-            String response = sendRequest(Command.EXIST);
+            String response = sendGetRequest(Command.EXIST);
             if(!response.equals("OK")){
                 //Server error response disconnect!
                 //////////////////////////
@@ -302,6 +347,45 @@ public class ClientFrm extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(null, ex.getMessage());
         }
     }
+    
+    public void refreshLiveList() {
+        this.responseListGroupLive = this.sendPostRequest(Command.GET_LIST_STREAM);
+        if(this.responseListGroupLive != null){
+            
+        }
+    }
+    
+    private void refreshLiveStreamPanel(){
+        List<StreamGroup> streamers = this.responseListGroupLive.listG;
+        Long timeGet = this.responseListGroupLive.timeGet;
+        for(StreamGroup sg : streamers){
+            boolean alreadyAdded = false;
+            String nameButton = sg.getName()+sg.getHost().getId();
+            for (Component component : this.pnLiveStream.getComponents()) {
+                if (component instanceof Button && component.getName() != null && component.getName().equals(nameButton)) {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+            if(!alreadyAdded){
+                Button button = new Button();
+                button.setName(nameButton);
+                button.setLabel(sg.getName());
+                ClientFrm clientFrmRef = this;
+                button.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+//                        clientFrmRef.setVisible(false);
+//                        new LiveStreamFrm(clientFrmRef,sg).setVisible(true);
+                    }
+                });
+                this.pnLiveStream.add(button);
+            }
+        }
+        this.pnLiveStream.revalidate();
+        this.pnLiveStream.repaint();
+    }
+    
     
     public DatagramSocket getUDPSocket(){
         return this.UDPSocket;
@@ -346,7 +430,7 @@ public class ClientFrm extends javax.swing.JFrame {
     private javax.swing.JButton btnAction;
     private javax.swing.JButton btnLive;
     private javax.swing.JLabel lbState;
-    private javax.swing.JPanel pLiveStream;
+    private javax.swing.JPanel pnLiveStream;
     private javax.swing.JTextField txtID;
     private javax.swing.JTextField txtName;
     // End of variables declaration//GEN-END:variables

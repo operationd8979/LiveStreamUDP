@@ -8,6 +8,7 @@ package com.chipchip.livestreamudp.Server.model;
 import com.chipchip.livestreamudp.Server.MainFrm;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.stream.Collectors;
@@ -54,9 +55,13 @@ public class ClientHandlerTCP implements Runnable {
                     this.mainFrm.addLiveGroup(this.idClient, this.nameClient);
                     outputStream.write(Command.OK.getBytes());
                     break;
-                case Command.OFFSTREAM:
+                case Command.OFF_STREAM:
                     this.mainFrm.removeLiveGroup(this.idClient,this.nameClient);
                     outputStream.write(Command.OK.getBytes());
+                    break;
+                case Command.GET_LIST_STREAM:
+                    ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+                    objectOutputStream.writeObject(new ResponseListGroupLive(MainFrm.streamers));
                     break;
                 default:
                     outputStream.write(Command.UNKNOW_COMMAND.getBytes());     

@@ -13,7 +13,8 @@ public class Command {
     
     public final static String CONNECT = "CONNECT";
     public final static String LIVE = "LIVE";
-    public final static String OFFSTREAM = "OFFSTREAM";
+    public final static String OFF_STREAM = "OFF_STREAM";
+    public final static String GET_LIST_STREAM = "GET_LIST_STREAM";
     public final static String EXIST = "EXIST";
     public final static String UNKNOW_COMMAND = "UNKNOW COMMAND";
     
