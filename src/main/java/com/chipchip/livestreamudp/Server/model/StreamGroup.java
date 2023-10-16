@@ -5,7 +5,6 @@
 package com.chipchip.livestreamudp.Server.model;
 
 import java.awt.image.BufferedImage;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 

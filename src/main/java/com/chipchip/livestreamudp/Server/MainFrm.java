@@ -9,6 +9,7 @@ import com.chipchip.livestreamudp.Client.LiveStreamFrm;
 import com.chipchip.livestreamudp.Server.model.Client;
 import com.chipchip.livestreamudp.Server.model.ClientHandlerTCP;
 import com.chipchip.livestreamudp.Server.model.Command;
+import com.chipchip.livestreamudp.Server.model.GroupLive;
 import com.chipchip.livestreamudp.Server.model.StreamGroup;
 import java.awt.Button;
 import java.awt.Component;
@@ -336,14 +337,11 @@ public class MainFrm extends javax.swing.JFrame {
                     else{
                         try{
                             String[] arrayString = requestData.trim().split("@");
-                            for(String s:arrayString){
-                                System.out.println(s);
-                            }
                             String command = arrayString[0];
                             String idClient = arrayString[1];
-                            String nameClient = arrayString.length>=3?arrayString[2]:"";
+                            String payLoad = arrayString.length>=3?arrayString[2]:"";
                             if(filterRequest(clientSocket,idClient)){
-                                new Thread(new ClientHandlerTCP(clientSocket,command,idClient,nameClient,this)).start();
+                                new Thread(new ClientHandlerTCP(clientSocket,command,idClient,payLoad,this)).start();
                                 continue;
                             }
                         }catch(Exception ex){
@@ -374,6 +372,13 @@ public class MainFrm extends javax.swing.JFrame {
                         if(group.getHost().getPort()==recivePacket.getPort()){
                             byteArrayInputStream = new ByteArrayInputStream(recivePacket.getData());
                             group.setCurrentImage(ImageIO.read(byteArrayInputStream));
+                            ////////////////
+                            for(Client c : group.getViewers()){
+                                System.out.println(c.toString());
+                                sendPacket = new DatagramPacket(recivePacket.getData(), recivePacket.getData().length,c.getAddr(),c.getPort());
+                                streamingSocket.send(sendPacket);
+                            }
+                            
                         }
                     }
                     
@@ -494,9 +499,9 @@ public class MainFrm extends javax.swing.JFrame {
     }
     
     public int addLiveGroup(String clientId,String name){
-        Client host = this.clients.stream().filter(p->p.getId().equals(clientId)).findFirst().orElse(null);
+        Client host = clients.stream().filter(p->p.getId().equals(clientId)).findFirst().orElse(null);
         StreamGroup newHost = new StreamGroup(host,name);
-        this.streamers.add(newHost);
+        streamers.add(newHost);
         
         Runnable addButtonTask = () -> addButton(newHost);
         Thread addButtonThread = new Thread(addButtonTask);
@@ -506,6 +511,47 @@ public class MainFrm extends javax.swing.JFrame {
 //        this.refreshLiveStreamPanel();
         log(this.informationClient(clientId)+ "opened live!");
         return 1;
+    }
+    
+    public List<GroupLive> getListStream() {
+        List<GroupLive> listLive = new ArrayList<>();
+        ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+        for(StreamGroup sg: MainFrm.streamers){
+            if(sg.getCurrentImage()!=null){
+                try{
+                    ImageIO.write(sg.getCurrentImage(), "PNG", arrayOutputStream);
+                    listLive.add(new GroupLive(sg.getHost(), sg.getName(), sg.getViewers().size(),arrayOutputStream.toByteArray()));
+                }catch(IOException ex){
+                    
+                }
+            }
+        }
+        return listLive;
+    }
+    
+    public int linkStream(String clientId,String hostId){
+        StreamGroup streamGroup = streamers.stream().filter(p->p.getHost().getId().equals(hostId)).findFirst().orElse(null);
+        if(streamGroup!=null){
+            Client client =clients.stream().filter(c->c.getId().equals(clientId)).findFirst().orElse(null);
+            if(client != null){
+                streamGroup.addViewer(client);
+                return 1;
+            }
+        }
+        return 0;
+    }
+    
+    public int unLinkStream(String clientId,String hostId) {
+        StreamGroup streamGroup = streamers.stream().filter(p->p.getHost().getId().equals(hostId)).findFirst().orElse(null);
+        if(streamGroup!=null){
+            Client client =clients.stream().filter(c->c.getId().equals(clientId)).findFirst().orElse(null);
+            if(client != null){
+                streamGroup.getViewers().remove(client);
+//                streamGroup.addViewer(client);
+                return 1;
+            }
+        }
+        return 0;
     }
     
     public void addButton(StreamGroup newHost){

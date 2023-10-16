@@ -6,16 +6,20 @@
 package com.chipchip.livestreamudp.Client;
 
 import com.chipchip.livestreamudp.Server.model.Command;
+import com.chipchip.livestreamudp.Server.model.GroupLive;
 import com.github.sarxos.webcam.Webcam;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -25,12 +29,19 @@ public class LiveStreamFrm extends javax.swing.JFrame {
 
     private boolean running = false;
     private ClientFrm clientFrm;
-    private Webcam webcam;
+    
+    private Webcam webcam = null;
+    private String HostWatchID = null;    
+    
     private BufferedImage bm = null;
     private ImageIcon img =  null;
     
     static DatagramPacket sendPacket = null;
     ByteArrayOutputStream byteArrayOutputStream = null;
+    
+    static DatagramPacket recivePacket = null;
+    ByteArrayInputStream byteArrayInputStream = null;
+    
     static byte[] imageData = new byte[65507];
     
 
@@ -45,9 +56,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
         
         bm = this.webcam.getImage();
         img =  new ImageIcon(bm);
-        this.jpStreaming.setIcon(img);
-        
-        
+        this.jpStreaming.setIcon(img);    
         
         Runnable liveStream = () -> {
             while (running) {
@@ -73,6 +82,31 @@ public class LiveStreamFrm extends javax.swing.JFrame {
         };
         
         new Thread(liveStream).start();
+    }
+    
+    public LiveStreamFrm(ClientFrm clientFrm, String HostWatchID) {
+        this.clientFrm = clientFrm;
+        this.HostWatchID = HostWatchID;
+        initComponents();
+        this.running = true;
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        recivePacket = new DatagramPacket(imageData, imageData.length);
+        Runnable watchLive = () -> {
+            System.out.println("runing watch");
+            while (running) {
+                try{
+                    this.clientFrm.getUDPSocket().receive(recivePacket);
+                    byteArrayInputStream = new ByteArrayInputStream(recivePacket.getData());
+                    bm = ImageIO.read(byteArrayInputStream);
+                }catch(IOException ex){
+                    ex.printStackTrace();
+                }
+                img = new ImageIcon(new ImageIcon(bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
+                //417x438
+                this.jpStreaming.setIcon(img);
+            }
+        };
+        new Thread(watchLive).start();
     }
 
 
@@ -152,7 +186,10 @@ public class LiveStreamFrm extends javax.swing.JFrame {
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
         // TODO add your handling code here:
         this.running = false;
-        this.clientFrm.sendGetRequest(Command.OFF_STREAM);
+        if(this.webcam!=null)
+            this.clientFrm.sendGetRequest(Command.OFF_STREAM,"");
+        else
+            this.clientFrm.sendGetRequest(Command.OFF_WATCH,HostWatchID);
         this.dispose();
     }//GEN-LAST:event_formWindowClosing
 

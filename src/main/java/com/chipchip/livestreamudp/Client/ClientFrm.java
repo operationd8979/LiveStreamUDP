@@ -8,13 +8,16 @@ package com.chipchip.livestreamudp.Client;
 import com.chipchip.livestreamudp.Server.model.Command;
 import com.chipchip.livestreamudp.Server.model.ResponseListGroupLive;
 import com.chipchip.livestreamudp.Server.model.StreamGroup;
-import com.google.gson.Gson;
+import com.chipchip.livestreamudp.Server.model.GroupLive;
 import java.awt.Button;
 import java.awt.Component;
+import java.awt.FlowLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,6 +31,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -61,6 +65,7 @@ public class ClientFrm extends javax.swing.JFrame {
      */
     public ClientFrm() {
         initComponents();
+        this.pnLiveStream.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
         initFrm();
     }
     
@@ -82,6 +87,8 @@ public class ClientFrm extends javax.swing.JFrame {
         this.lbState.setText(OFFLINE);
         this.btnAction.setText(CONNECT);
         this.txtID.setText(idClinet); 
+        this.txtTimeGetLives.setText("");
+        removeAllButton();
     }
 
     /**
@@ -99,6 +106,7 @@ public class ClientFrm extends javax.swing.JFrame {
         pnLiveStream = new javax.swing.JPanel();
         btnLive = new javax.swing.JButton();
         txtID = new javax.swing.JTextField();
+        txtTimeGetLives = new javax.swing.JTextField();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -125,7 +133,7 @@ public class ClientFrm extends javax.swing.JFrame {
         pnLiveStream.setLayout(pnLiveStreamLayout);
         pnLiveStreamLayout.setHorizontalGroup(
             pnLiveStreamLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 699, Short.MAX_VALUE)
+            .addGap(0, 787, Short.MAX_VALUE)
         );
         pnLiveStreamLayout.setVerticalGroup(
             pnLiveStreamLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -147,7 +155,12 @@ public class ClientFrm extends javax.swing.JFrame {
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(303, 303, 303)
+                        .addComponent(btnLive)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(txtTimeGetLives, javax.swing.GroupLayout.PREFERRED_SIZE, 277, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(layout.createSequentialGroup()
                         .addGap(23, 23, 23)
                         .addComponent(lbState)
@@ -155,16 +168,12 @@ public class ClientFrm extends javax.swing.JFrame {
                         .addComponent(txtID, javax.swing.GroupLayout.PREFERRED_SIZE, 376, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(18, 18, 18)
                         .addComponent(txtName, javax.swing.GroupLayout.PREFERRED_SIZE, 118, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(btnAction))
-                    .addGroup(layout.createSequentialGroup()
-                        .addContainerGap(14, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         .addComponent(pnLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
-                .addGap(303, 303, 303)
-                .addComponent(btnLive)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -178,7 +187,9 @@ public class ClientFrm extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(pnLiveStream, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 23, Short.MAX_VALUE)
-                .addComponent(btnLive)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnLive)
+                    .addComponent(txtTimeGetLives, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap())
         );
 
@@ -200,7 +211,7 @@ public class ClientFrm extends javax.swing.JFrame {
 
     private void btnLiveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLiveActionPerformed
         // TODO add your handling code here:
-        if(this.sendGetRequest(Command.LIVE).equals(Command.OK)){
+        if(this.sendGetRequest(Command.LIVE,"").equals(Command.OK)){
             this.setVisible(false);
             new LiveStreamFrm(this).setVisible(true);
         }
@@ -213,7 +224,7 @@ public class ClientFrm extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_formWindowClosing
 
-    public String sendGetRequest(String content) {
+    public String sendGetRequest(String content,String payload) {
         Socket socket = null;
         try{
             socket = new Socket(IPServer, portTCPServer);
@@ -230,6 +241,9 @@ public class ClientFrm extends javax.swing.JFrame {
                     return "nameNull";
                 }
                 content+="@"+name;
+            }
+            if(!payload.equals("")){
+                content+="@"+payload;
             }
             outputStream.write(content.getBytes());
             //////////////////////////////////
@@ -313,12 +327,12 @@ public class ClientFrm extends javax.swing.JFrame {
         this.running = true;
         UDPSocket = openSocketUDP();
         if(UDPSocket==null){
-            initFrm();
+            disconnect();
             return;
         }
-        String responseTCP = sendGetRequest(Command.CONNECT+"@"+UDPSocket.getLocalPort());
+        String responseTCP = sendGetRequest(Command.CONNECT+"@"+UDPSocket.getLocalPort(),"");
         if(!responseTCP.startsWith("OK")){
-            initFrm();
+            disconnect();
             return;
         }
         this.idClinet = responseTCP.trim().split("@")[1];
@@ -333,7 +347,7 @@ public class ClientFrm extends javax.swing.JFrame {
     private void disconnect() {
         this.running = false;
         try{
-            String response = sendGetRequest(Command.EXIST);
+            String response = sendGetRequest(Command.EXIST,"");
             if(!response.equals("OK")){
                 //Server error response disconnect!
                 //////////////////////////
@@ -344,61 +358,81 @@ public class ClientFrm extends javax.swing.JFrame {
                 UDPSocket.close();
                 UDPSocket = null;
             }
-            this.txtName.setEditable(!running);
-            this.btnLive.setEnabled(running);
-            this.lbState.setText(OFFLINE);
-            this.btnAction.setText(CONNECT);
             this.portUDP = -1;
-            this.idClinet = "FFFFFFF";
-            this.txtID.setText(idClinet);
+            initFrm();
         }catch(Exception ex){
             JOptionPane.showMessageDialog(null, ex.getMessage());
         }
     }
     
     public void refreshLiveList() {
-        ResponseListGroupLive responseLive = this.sendPostRequest(Command.GET_LIST_STREAM);
-        if(responseLive!=null){
-            System.out.println(responseLive);
+        this.responseListGroupLive = this.sendPostRequest(Command.GET_LIST_STREAM);
+        if(this.responseListGroupLive!=null){
+            refreshLiveStreamPanel();
+        }
+    }
+    
+    private void removeAllButton () {
+        for (Component component : pnLiveStream.getComponents()) {
+            if (component instanceof JPanel && component.getName() != null) {
+                pnLiveStream.remove(component);
+                pnLiveStream.revalidate();
+                pnLiveStream.repaint();
+            }
         }
     }
     
     private void refreshLiveStreamPanel(){
-//        List<StreamGroup> streamers = this.responseListGroupLive.listG;
-//        Long timeGet = this.responseListGroupLive.timeGet;
-//        for(StreamGroup sg : streamers){
-//            boolean alreadyAdded = false;
-//            String IDLive = sg.getHost().getId();
-//            for (Component component : this.pnLiveStream.getComponents()) {
-//                if (component instanceof JPanel && component.getName() != null && component.getName().equals(IDLive)) {
-//                    alreadyAdded = true;
-//                    break;
-//                }
-//            }
-//            if(!alreadyAdded){
-//                Button button = new Button();
-//                button.setLabel(sg.getName());
-//                ClientFrm clientFrmRef = this;
-//                button.addActionListener(new ActionListener() {
-//                    @Override
-//                    public void actionPerformed(ActionEvent e) {
-////                        clientFrmRef.setVisible(false);
-////                        new LiveStreamFrm(clientFrmRef,sg).setVisible(true);
-//                    }
-//                });
-//                ImageIcon originalIcon = new ImageIcon(sg.getCurrentImage());
-//                Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-//                ImageIcon scaledIcon = new ImageIcon(scaledImage);
-//                JLabel liveGroup = new JLabel(scaledIcon);
-//                JPanel labelPanel = new JPanel();
-//                labelPanel.add(liveGroup);
-//                labelPanel.add(button);
-//                labelPanel.setName(IDLive);
-//                this.pnLiveStream.add(labelPanel);
-//            }
-//        }
-//        this.pnLiveStream.revalidate();
-//        this.pnLiveStream.repaint();
+        List<GroupLive> listLive = this.responseListGroupLive.listLive;
+        Long timeGet = this.responseListGroupLive.timeGet;
+        this.txtTimeGetLives.setText(Long.toString(timeGet));
+        for(GroupLive live : listLive){
+            boolean alreadyAdded = false;
+            String IDLive = live.getHost().getId();
+            for (Component component : this.pnLiveStream.getComponents()) {
+                if (component instanceof JPanel && component.getName() != null && component.getName().equals(IDLive)) {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+            if(!alreadyAdded){
+                Button button = new Button();
+                button.setLabel(live.getName());
+                ClientFrm clientFrmRef = this;
+                button.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) { 
+                        String response = sendGetRequest(Command.WATCH_LIVE,live.getHost().getId());
+                        if(response.equals(Command.OK)){
+                            clientFrmRef.setVisible(false);
+                            new LiveStreamFrm(clientFrmRef,live.getHost().getId()).setVisible(true);
+                        }
+                        else{
+                            JOptionPane.showMessageDialog(null, "Error: không link được live stream.");
+                        }
+                    }
+                });
+                BufferedImage bw = null;
+                try{
+                    ByteArrayInputStream arrayInputStream = new ByteArrayInputStream(live.getImageData());
+                    bw = ImageIO.read(arrayInputStream);
+                }catch(IOException ex){
+                    JOptionPane.showMessageDialog(null, ex.getMessage());
+                }
+                ImageIcon originalIcon = new ImageIcon(bw);
+                Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+                ImageIcon scaledIcon = new ImageIcon(scaledImage);
+                System.out.println(scaledIcon);
+                JLabel liveGroup = new JLabel(scaledIcon);
+                JPanel labelPanel = new JPanel();
+                labelPanel.add(liveGroup);
+                labelPanel.add(button);
+                labelPanel.setName(IDLive);
+                this.pnLiveStream.add(labelPanel);
+            }
+        }
+        this.pnLiveStream.revalidate();
+        this.pnLiveStream.repaint();
     }
     
     
@@ -448,5 +482,6 @@ public class ClientFrm extends javax.swing.JFrame {
     private javax.swing.JPanel pnLiveStream;
     private javax.swing.JTextField txtID;
     private javax.swing.JTextField txtName;
+    private javax.swing.JTextField txtTimeGetLives;
     // End of variables declaration//GEN-END:variables
 }

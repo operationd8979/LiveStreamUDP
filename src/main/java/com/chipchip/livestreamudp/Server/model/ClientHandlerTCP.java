@@ -6,7 +6,6 @@
 package com.chipchip.livestreamudp.Server.model;
 
 import com.chipchip.livestreamudp.Server.MainFrm;
-import com.google.gson.Gson;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,14 +27,14 @@ public class ClientHandlerTCP implements Runnable {
     private String idClient;
     private String commnad;
     private Socket clientSocket;
-    private String nameClient;
+    private String payLoad;
 
-    public ClientHandlerTCP(Socket clientSocket,String commnad,String idClient,String nameClient,MainFrm mainFrm) {
+    public ClientHandlerTCP(Socket clientSocket,String commnad,String idClient,String payLoad,MainFrm mainFrm) {
         this.idClient = idClient;
         this.mainFrm = mainFrm;
         this.commnad = commnad;
         this.clientSocket = clientSocket;
-        this.nameClient = nameClient;
+        this.payLoad = payLoad;
     }
     
     public String informationClient(){
@@ -55,34 +54,38 @@ public class ClientHandlerTCP implements Runnable {
                 case Command.EXIST:
                     this.mainFrm.logoutClient(this.idClient);
                     outputStream.write(Command.OK.getBytes());
+                    outputStream.flush();
                     break;
                 case Command.LIVE:
-                    this.mainFrm.addLiveGroup(this.idClient, this.nameClient);
+                    this.mainFrm.addLiveGroup(this.idClient, this.payLoad);
                     outputStream.write(Command.OK.getBytes());
+                    outputStream.flush();
                     break;
                 case Command.OFF_STREAM:
-                    this.mainFrm.removeLiveGroup(this.idClient,this.nameClient);
+                    this.mainFrm.removeLiveGroup(this.idClient,this.payLoad);
                     outputStream.write(Command.OK.getBytes());
+                    outputStream.flush();
                     break;
                 case Command.GET_LIST_STREAM:
                     ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-                    List<GroupLive> listLive = new ArrayList<>();
-                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-                    for(StreamGroup sg: MainFrm.streamers){
-                        if(sg.getCurrentImage()!=null){
-                            ImageIO.write(sg.getCurrentImage(), "PNG", byteArrayOutputStream);
-                            listLive.add(new GroupLive(sg.getHost(), sg.getName(), sg.getViewers().size(),byteArrayOutputStream.toByteArray()));
-                        }
-                    }
-                    if(listLive.size()>0){
+                    List<GroupLive> listLive = this.mainFrm.getListStream(); 
+                    if(!listLive.isEmpty()){
                         ResponseListGroupLive responseLive = new ResponseListGroupLive(listLive);
                         objectOutputStream.writeObject(responseLive);
+                        objectOutputStream.flush();
                     }
-//                    Graphics2D
-//                    ResponseListGroupLive responseLive = new ResponseListGroupLive(null);
-//                    Gson gson = new Gson();
-//                    String json = gson.toJson(responseLive);
-//                    outputStream.write(json.getBytes());
+                    break;
+                case Command.WATCH_LIVE:
+                    if(this.mainFrm.linkStream(this.idClient, this.payLoad)==1){
+                        outputStream.write(Command.OK.getBytes());
+                        outputStream.flush();
+                    }  
+                    break;
+                case Command.OFF_WATCH:
+                    if(this.mainFrm.unLinkStream(this.idClient, this.payLoad)==1){
+                        outputStream.write(Command.OK.getBytes());
+                        outputStream.flush();
+                    }  
                     break;
                 default:
                     outputStream.write(Command.UNKNOW_COMMAND.getBytes());     

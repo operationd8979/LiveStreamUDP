@@ -11,7 +11,7 @@ import java.io.Serializable;
  *
  * @author Admin
  */
-class GroupLive implements Serializable{
+public class GroupLive implements Serializable{
     
     private final Client host;
     private final String name;
@@ -37,6 +37,10 @@ class GroupLive implements Serializable{
     
     public String getName() {
         return this.name;
+    }
+    
+    public byte[] getImageData() {
+        return this.imageData;
     }
     
 //    public BufferedImage getCurrentImage(){
