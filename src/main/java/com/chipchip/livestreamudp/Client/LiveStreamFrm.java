@@ -7,6 +7,7 @@ package com.chipchip.livestreamudp.Client;
 
 import com.chipchip.livestreamudp.Server.model.Command;
 import com.github.sarxos.webcam.Webcam;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -52,7 +53,9 @@ public class LiveStreamFrm extends javax.swing.JFrame {
             while (running) {
                 byteArrayOutputStream = new ByteArrayOutputStream();
                 bm = this.webcam.getImage();
-                img = new ImageIcon(bm);
+//                img = new ImageIcon(bm);
+                img = new ImageIcon(new ImageIcon(bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
+                //417x438
                 this.jpStreaming.setIcon(img);
                 try {
                     ImageIO.write(bm, "png", byteArrayOutputStream);

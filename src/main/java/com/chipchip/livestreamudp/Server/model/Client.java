@@ -5,13 +5,14 @@
  */
 package com.chipchip.livestreamudp.Server.model;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 
 /**
  *
  * @author Admin
  */
-public class Client {
+public class Client implements Serializable{
     
     private final String id;
     private final InetAddress addr;

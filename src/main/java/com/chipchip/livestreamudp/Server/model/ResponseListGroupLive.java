@@ -11,12 +11,14 @@ import java.util.List;
  *
  * @author operationd
  */
+
+
 public class ResponseListGroupLive implements Serializable{
-    public final List<StreamGroup> listG;
+    public final List<GroupLive> listLive;
     public final long timeGet;
     
-    public ResponseListGroupLive(List<StreamGroup> listG){
-        this.listG = listG;
+    public ResponseListGroupLive(List<GroupLive> listLive){
+        this.listLive = listLive;
         this.timeGet = System.currentTimeMillis();
     }
 

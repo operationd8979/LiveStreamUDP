@@ -13,7 +13,7 @@ import java.util.List;
  *
  * @author operationd
  */
-public class StreamGroup implements Serializable {
+public class StreamGroup {
     
     private final Client host;
     private final String name;
@@ -32,6 +32,10 @@ public class StreamGroup implements Serializable {
     
     public List<Client> getViewers(){
         return this.viewers;
+    }
+    
+    public void addViewer(Client client){
+        this.viewers.add(client);
     }
     
     public String getName() {

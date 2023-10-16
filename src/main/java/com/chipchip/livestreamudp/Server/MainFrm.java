@@ -330,12 +330,12 @@ public class MainFrm extends javax.swing.JFrame {
                 if ((bytesRead = inputStream.read(buffer)) != -1) {
                     String requestData = new String(buffer, 0, bytesRead);
                     if(requestData.startsWith(Command.CONNECT)){
-                        int port = Integer.parseInt(requestData.trim().strip().split("@")[1]);
+                        int port = Integer.parseInt(requestData.trim().split("@")[1]);
                         outputStream.write((Command.OK+"@"+addClient(clientSocket,port)).getBytes());
                     }
                     else{
                         try{
-                            String[] arrayString = requestData.trim().strip().split("@");
+                            String[] arrayString = requestData.trim().split("@");
                             for(String s:arrayString){
                                 System.out.println(s);
                             }

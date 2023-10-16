@@ -8,11 +8,14 @@ package com.chipchip.livestreamudp.Client;
 import com.chipchip.livestreamudp.Server.model.Command;
 import com.chipchip.livestreamudp.Server.model.ResponseListGroupLive;
 import com.chipchip.livestreamudp.Server.model.StreamGroup;
+import com.google.gson.Gson;
 import java.awt.Button;
 import java.awt.Component;
+import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -25,7 +28,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.List;
+import javax.swing.ImageIcon;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
 /**
  *
@@ -184,7 +190,7 @@ public class ClientFrm extends javax.swing.JFrame {
         if(this.btnAction.getText().equals(CONNECT)){
             if(!txtName.getText().equals("")&&txtName.getText()!=null){
                 connect();
-//                refreshLiveList();
+                refreshLiveList();
             }
         }
         else{
@@ -269,11 +275,13 @@ public class ClientFrm extends javax.swing.JFrame {
                 ResponseListGroupLive response = (ResponseListGroupLive) objectInputStream.readObject();
                 return response;
             }catch(ClassNotFoundException ex){
-                JOptionPane.showMessageDialog(null, ex.getMessage());
+                JOptionPane.showMessageDialog(null, ex.getMessage()+ "from sendPostRequest");
+                return null;
+            }catch(EOFException ex){
                 return null;
             }
         }catch(IOException ex){
-            JOptionPane.showMessageDialog(null, ex.getMessage());
+            JOptionPane.showMessageDialog(null, ex.getClass()+ " from sendPostRequest");
             if(socket!=null){
                 try{
                     socket.close();
@@ -313,7 +321,7 @@ public class ClientFrm extends javax.swing.JFrame {
             initFrm();
             return;
         }
-        this.idClinet = responseTCP.trim().strip().split("@")[1];
+        this.idClinet = responseTCP.trim().split("@")[1];
         this.txtName.setEditable(!running);
         this.btnLive.setEnabled(running);
         this.lbState.setText(ONLINE);
@@ -349,41 +357,48 @@ public class ClientFrm extends javax.swing.JFrame {
     }
     
     public void refreshLiveList() {
-        this.responseListGroupLive = this.sendPostRequest(Command.GET_LIST_STREAM);
-        if(this.responseListGroupLive != null){
-            
+        ResponseListGroupLive responseLive = this.sendPostRequest(Command.GET_LIST_STREAM);
+        if(responseLive!=null){
+            System.out.println(responseLive);
         }
     }
     
     private void refreshLiveStreamPanel(){
-        List<StreamGroup> streamers = this.responseListGroupLive.listG;
-        Long timeGet = this.responseListGroupLive.timeGet;
-        for(StreamGroup sg : streamers){
-            boolean alreadyAdded = false;
-            String nameButton = sg.getName()+sg.getHost().getId();
-            for (Component component : this.pnLiveStream.getComponents()) {
-                if (component instanceof Button && component.getName() != null && component.getName().equals(nameButton)) {
-                    alreadyAdded = true;
-                    break;
-                }
-            }
-            if(!alreadyAdded){
-                Button button = new Button();
-                button.setName(nameButton);
-                button.setLabel(sg.getName());
-                ClientFrm clientFrmRef = this;
-                button.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent e) {
-//                        clientFrmRef.setVisible(false);
-//                        new LiveStreamFrm(clientFrmRef,sg).setVisible(true);
-                    }
-                });
-                this.pnLiveStream.add(button);
-            }
-        }
-        this.pnLiveStream.revalidate();
-        this.pnLiveStream.repaint();
+//        List<StreamGroup> streamers = this.responseListGroupLive.listG;
+//        Long timeGet = this.responseListGroupLive.timeGet;
+//        for(StreamGroup sg : streamers){
+//            boolean alreadyAdded = false;
+//            String IDLive = sg.getHost().getId();
+//            for (Component component : this.pnLiveStream.getComponents()) {
+//                if (component instanceof JPanel && component.getName() != null && component.getName().equals(IDLive)) {
+//                    alreadyAdded = true;
+//                    break;
+//                }
+//            }
+//            if(!alreadyAdded){
+//                Button button = new Button();
+//                button.setLabel(sg.getName());
+//                ClientFrm clientFrmRef = this;
+//                button.addActionListener(new ActionListener() {
+//                    @Override
+//                    public void actionPerformed(ActionEvent e) {
+////                        clientFrmRef.setVisible(false);
+////                        new LiveStreamFrm(clientFrmRef,sg).setVisible(true);
+//                    }
+//                });
+//                ImageIcon originalIcon = new ImageIcon(sg.getCurrentImage());
+//                Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+//                ImageIcon scaledIcon = new ImageIcon(scaledImage);
+//                JLabel liveGroup = new JLabel(scaledIcon);
+//                JPanel labelPanel = new JPanel();
+//                labelPanel.add(liveGroup);
+//                labelPanel.add(button);
+//                labelPanel.setName(IDLive);
+//                this.pnLiveStream.add(labelPanel);
+//            }
+//        }
+//        this.pnLiveStream.revalidate();
+//        this.pnLiveStream.repaint();
     }
     
     

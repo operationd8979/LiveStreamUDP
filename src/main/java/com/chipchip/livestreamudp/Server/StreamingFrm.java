@@ -5,6 +5,7 @@
 package com.chipchip.livestreamudp.Server;
 
 import com.chipchip.livestreamudp.Server.model.StreamGroup;
+import java.awt.Image;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
@@ -41,7 +42,8 @@ public class StreamingFrm extends javax.swing.JFrame {
             while (running) {
                 ImageIcon imageIcon = null;
                 while(this.running){
-                    imageIcon = new ImageIcon(this.group.getCurrentImage());
+                    imageIcon = new ImageIcon(new ImageIcon(this.group.getCurrentImage()).getImage().getScaledInstance(750, 468, Image.SCALE_DEFAULT));
+//                    imageIcon = new ImageIcon(this.group.getCurrentImage());
                     this.lbStreaming.setIcon(imageIcon);
                 }
             }

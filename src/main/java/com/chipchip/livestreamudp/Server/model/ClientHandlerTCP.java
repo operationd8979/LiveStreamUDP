@@ -6,12 +6,17 @@
 package com.chipchip.livestreamudp.Server.model;
 
 import com.chipchip.livestreamudp.Server.MainFrm;
+import com.google.gson.Gson;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
+import javax.imageio.ImageIO;
 
 /**
  *
@@ -61,7 +66,23 @@ public class ClientHandlerTCP implements Runnable {
                     break;
                 case Command.GET_LIST_STREAM:
                     ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-                    objectOutputStream.writeObject(new ResponseListGroupLive(MainFrm.streamers));
+                    List<GroupLive> listLive = new ArrayList<>();
+                    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+                    for(StreamGroup sg: MainFrm.streamers){
+                        if(sg.getCurrentImage()!=null){
+                            ImageIO.write(sg.getCurrentImage(), "PNG", byteArrayOutputStream);
+                            listLive.add(new GroupLive(sg.getHost(), sg.getName(), sg.getViewers().size(),byteArrayOutputStream.toByteArray()));
+                        }
+                    }
+                    if(listLive.size()>0){
+                        ResponseListGroupLive responseLive = new ResponseListGroupLive(listLive);
+                        objectOutputStream.writeObject(responseLive);
+                    }
+//                    Graphics2D
+//                    ResponseListGroupLive responseLive = new ResponseListGroupLive(null);
+//                    Gson gson = new Gson();
+//                    String json = gson.toJson(responseLive);
+//                    outputStream.write(json.getBytes());
                     break;
                 default:
                     outputStream.write(Command.UNKNOW_COMMAND.getBytes());     
