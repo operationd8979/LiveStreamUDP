@@ -28,13 +28,15 @@ public class ClientHandlerTCP implements Runnable {
     private String commnad;
     private Socket clientSocket;
     private String payLoad;
+    private String payLoad2;
 
-    public ClientHandlerTCP(Socket clientSocket,String commnad,String idClient,String payLoad,MainFrm mainFrm) {
+    public ClientHandlerTCP(Socket clientSocket,String commnad,String idClient,String payLoad,String payLoad2,MainFrm mainFrm) {
         this.idClient = idClient;
         this.mainFrm = mainFrm;
         this.commnad = commnad;
         this.clientSocket = clientSocket;
         this.payLoad = payLoad;
+        this.payLoad2 = payLoad2;
     }
     
     public String informationClient(){
@@ -57,7 +59,7 @@ public class ClientHandlerTCP implements Runnable {
                     outputStream.flush();
                     break;
                 case Command.LIVE:
-                    this.mainFrm.addLiveGroup(this.idClient, this.payLoad);
+                    this.mainFrm.addLiveGroup(this.idClient, this.payLoad, outputStream);
                     outputStream.write(Command.OK.getBytes());
                     outputStream.flush();
                     break;
@@ -76,7 +78,7 @@ public class ClientHandlerTCP implements Runnable {
                     }
                     break;
                 case Command.WATCH_LIVE:
-                    if(this.mainFrm.linkStream(this.idClient, this.payLoad)==1){
+                    if(this.mainFrm.linkStream(this.idClient, this.payLoad, outputStream)==1){
                         outputStream.write(Command.OK.getBytes());
                         outputStream.flush();
                     }  
@@ -87,10 +89,16 @@ public class ClientHandlerTCP implements Runnable {
                         outputStream.flush();
                     }  
                     break;
+                case Command.CHAT:
+                    this.mainFrm.onSendChat(this.payLoad,this.payLoad2);
+                    break;
                 default:
                     outputStream.write(Command.UNKNOW_COMMAND.getBytes());     
             }
-            this.clientSocket.close();
+            if(!(this.commnad.equals(Command.LIVE)||this.commnad.equals(Command.WATCH_LIVE))){
+                System.out.println("closed client socket");
+                this.clientSocket.close();
+            }  
         } catch (IOException ex) {
             ex.printStackTrace();
         }

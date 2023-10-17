@@ -55,10 +55,13 @@ public class ClientFrm extends javax.swing.JFrame {
     
     
     private boolean running = false;
-    private String idClinet = "FFFFFFF";
+    public String idClinet = "FFFFFFF";
     private DatagramSocket UDPSocket = null;
     private int portUDP = -1;
     private ResponseListGroupLive responseListGroupLive = null;
+    
+    public Socket ChatSocket = null;
+    public InputStream inputStream = null;
     
     /**
      * Creates new form ClientFrm
@@ -76,6 +79,15 @@ public class ClientFrm extends javax.swing.JFrame {
                 UDPSocket = null;
             }
             this.portUDP = -1;
+        }catch(Exception ex){
+            JOptionPane.showMessageDialog(null, ex.getMessage());
+        }
+        try{
+            if(ChatSocket!=null){
+                ChatSocket.close();
+                ChatSocket = null;
+                inputStream = null;
+            }
         }catch(Exception ex){
             JOptionPane.showMessageDialog(null, ex.getMessage());
         }
@@ -253,6 +265,12 @@ public class ClientFrm extends javax.swing.JFrame {
             byte[] buffer = new byte[1024];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
+                //chat
+                if(content.startsWith(Command.WATCH_LIVE)||content.startsWith(Command.LIVE)){
+                    System.out.println("socket init");
+                    this.ChatSocket = socket;
+                    return new String(buffer, 0, bytesRead);
+                } 
                 socket.close();
                 return new String(buffer, 0, bytesRead);
             }
@@ -433,6 +451,10 @@ public class ClientFrm extends javax.swing.JFrame {
         }
         this.pnLiveStream.revalidate();
         this.pnLiveStream.repaint();
+    }
+    
+    public String getUserName(){
+        return this.txtName.getText();
     }
     
     

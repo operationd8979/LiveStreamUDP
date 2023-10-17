@@ -5,6 +5,8 @@
 package com.chipchip.livestreamudp.Server.model;
 
 import java.awt.image.BufferedImage;
+import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,11 +20,13 @@ public class StreamGroup {
     private final String name;
     private List<Client> viewers;
     private BufferedImage currentImage = null;
+    public OutputStream osHost = null;
     
-    public StreamGroup(Client host,String name){
+    public StreamGroup(Client host,String name, OutputStream os){
         this.host = host;
         this.name = name;
         viewers = new ArrayList<>();
+        osHost = os;
     }
     
     public Client getHost() {

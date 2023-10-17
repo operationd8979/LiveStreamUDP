@@ -13,9 +13,11 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.Socket;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
@@ -80,8 +82,15 @@ public class LiveStreamFrm extends javax.swing.JFrame {
             if(webcam != null)
                 webcam.close();
         };
-        
         new Thread(liveStream).start();
+        Runnable onMessage = () -> {
+            try{
+                this.onMessage();
+            }catch(IOException ex){
+                ex.printStackTrace();
+            }
+        };
+        new Thread(onMessage).start();
     }
     
     public LiveStreamFrm(ClientFrm clientFrm, String HostWatchID) {
@@ -107,6 +116,29 @@ public class LiveStreamFrm extends javax.swing.JFrame {
             }
         };
         new Thread(watchLive).start();
+        Runnable onMessage = () -> {
+            try{
+                this.onMessage();
+            }catch(IOException ex){
+                ex.printStackTrace();
+            }
+        };
+        new Thread(onMessage).start();
+    }
+    
+    private void onMessage() throws IOException{
+        if(this.clientFrm.ChatSocket!=null){
+            Socket socket = this.clientFrm.ChatSocket;
+            InputStream inputStream = socket.getInputStream();
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while(this.running){
+                if ((bytesRead = inputStream.read(buffer)) != -1){
+                    String contentChat = new String(buffer, 0, bytesRead);
+                    this.txtChat.append(contentChat+"\n");
+                }
+            }
+        }
     }
 
 
@@ -136,6 +168,11 @@ public class LiveStreamFrm extends javax.swing.JFrame {
         jScrollPane1.setViewportView(txtChat);
 
         btnSendMessage.setText("Send");
+        btnSendMessage.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSendMessageActionPerformed(evt);
+            }
+        });
 
         jLabel1.setText("Chat log:");
 
@@ -188,10 +225,33 @@ public class LiveStreamFrm extends javax.swing.JFrame {
         this.running = false;
         if(this.webcam!=null)
             this.clientFrm.sendGetRequest(Command.OFF_STREAM,"");
-        else
+        else{
             this.clientFrm.sendGetRequest(Command.OFF_WATCH,HostWatchID);
+            if( this.clientFrm.ChatSocket!=null){
+                try{
+                    this.clientFrm.ChatSocket.close();
+                    this.clientFrm.ChatSocket = null;
+                }catch(Exception ex){
+                    ex.printStackTrace();
+                }
+            }
+        }
+            
         this.dispose();
     }//GEN-LAST:event_formWindowClosing
+
+    private void btnSendMessageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendMessageActionPerformed
+        // TODO add your handling code here:
+        try{
+            String content = this.clientFrm.getUserName()+":"+this.txtMessage.getText();
+            String idGroup = this.HostWatchID==null?this.clientFrm.idClinet:this.HostWatchID;
+            this.clientFrm.sendGetRequest(Command.CHAT, idGroup+"@"+content);
+            this.txtMessage.setText("");
+        }catch(Exception ex){
+            
+        }
+        
+    }//GEN-LAST:event_btnSendMessageActionPerformed
 
 
 //    public static void main(String args[]) {

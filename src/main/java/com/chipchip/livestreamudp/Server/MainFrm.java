@@ -340,8 +340,9 @@ public class MainFrm extends javax.swing.JFrame {
                             String command = arrayString[0];
                             String idClient = arrayString[1];
                             String payLoad = arrayString.length>=3?arrayString[2]:"";
+                            String payLoad2 = arrayString.length>=4?arrayString[3]:"";
                             if(filterRequest(clientSocket,idClient)){
-                                new Thread(new ClientHandlerTCP(clientSocket,command,idClient,payLoad,this)).start();
+                                new Thread(new ClientHandlerTCP(clientSocket,command,idClient,payLoad,payLoad2,this)).start();
                                 continue;
                             }
                         }catch(Exception ex){
@@ -498,15 +499,17 @@ public class MainFrm extends javax.swing.JFrame {
         return 1;
     }
     
-    public int addLiveGroup(String clientId,String name){
+    public int addLiveGroup(String clientId,String name, OutputStream outputStream){
         Client host = clients.stream().filter(p->p.getId().equals(clientId)).findFirst().orElse(null);
-        StreamGroup newHost = new StreamGroup(host,name);
+        StreamGroup newHost = new StreamGroup(host,name,outputStream);
         streamers.add(newHost);
         
         Runnable addButtonTask = () -> addButton(newHost);
         Thread addButtonThread = new Thread(addButtonTask);
         addButtonThread.setName("[AddLive]"+name);
         addButtonThread.start();
+        
+        this.lbLineD.setText(Integer.toString(Integer.parseInt(lbLineD.getText())+1));
         
 //        this.refreshLiveStreamPanel();
         log(this.informationClient(clientId)+ "opened live!");
@@ -529,12 +532,14 @@ public class MainFrm extends javax.swing.JFrame {
         return listLive;
     }
     
-    public int linkStream(String clientId,String hostId){
+    public int linkStream(String clientId,String hostId, OutputStream outputStream){
         StreamGroup streamGroup = streamers.stream().filter(p->p.getHost().getId().equals(hostId)).findFirst().orElse(null);
         if(streamGroup!=null){
             Client client =clients.stream().filter(c->c.getId().equals(clientId)).findFirst().orElse(null);
             if(client != null){
+                client.os = outputStream;
                 streamGroup.addViewer(client);
+                this.lbLineU.setText(Integer.toString(Integer.parseInt(lbLineU.getText())+1));
                 return 1;
             }
         }
@@ -546,7 +551,9 @@ public class MainFrm extends javax.swing.JFrame {
         if(streamGroup!=null){
             Client client =clients.stream().filter(c->c.getId().equals(clientId)).findFirst().orElse(null);
             if(client != null){
+                client.os = null;
                 streamGroup.getViewers().remove(client);
+                this.lbLineU.setText(Integer.toString(Integer.parseInt(lbLineU.getText())-1));
 //                streamGroup.addViewer(client);
                 return 1;
             }
@@ -591,15 +598,52 @@ public class MainFrm extends javax.swing.JFrame {
     }
     
     public int removeLiveGroup(String clientId,String name){
-        this.streamers = MainFrm.streamers.stream()
-                .filter(c->!c.getHost().getId().equals(clientId)).collect(Collectors.toList());
-        this.removeLiveNode(clientId);
-        log(this.informationClient(clientId)+ "offed stream!");
+        StreamGroup group = MainFrm.streamers.stream()
+                .filter(c->c.getHost().getId().equals(clientId)).findFirst().orElse(null);
+        if(group != null){
+            for(Client c : group.getViewers()){
+                c.os = null;
+            }
+            int size = group.getViewers().size();
+            streamers.remove(group);
+            this.removeLiveNode(clientId);
+            this.lbLineD.setText(Integer.toString(Integer.parseInt(lbLineD.getText())-1));
+            this.lbLineU.setText(Integer.toString(Integer.parseInt(lbLineU.getText())-size));
+            log(this.informationClient(clientId)+ "offed stream!");
+        }
+//        this.streamers = MainFrm.streamers.stream()
+//                .filter(c->!c.getHost().getId().equals(clientId)).collect(Collectors.toList());
+//        this.removeLiveNode(clientId);
+//        this.lbLineD.setText(Integer.toString(Integer.parseInt(lbLineD.getText())-1));
+//        this.lbLineU.setText(Integer.toString(Integer.parseInt(lbLineU.getText())-1));
+//        log(this.informationClient(clientId)+ "offed stream!");
         return 1;
     }
     
     public void log(String log){
         this.txtLogs.append(log+"\n");
+    }
+    
+    public void onSendChat(String hostID,String content){
+        StreamGroup group = streamers.stream().filter(g->g.getHost().getId().equals(hostID)).findFirst().orElse(null);
+        if(group==null){
+            log("Some chat lost!");
+            return;
+        }
+        try{
+            group.osHost.write(content.getBytes());
+        }catch(Exception ex){
+            JOptionPane.showMessageDialog(null, ex.getMessage());
+        }
+        for(Client client:group.getViewers()){
+            try{
+                client.os.write(content.getBytes());
+            }catch(Exception ex){
+                JOptionPane.showMessageDialog(null, ex.getMessage());
+                log("Some client socket was closed!");
+            }
+            
+        }
     }
     
     
