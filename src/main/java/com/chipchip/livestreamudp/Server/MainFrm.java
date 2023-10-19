@@ -63,6 +63,9 @@ public class MainFrm extends javax.swing.JFrame {
     private Thread tcpThread = null;
     private Thread udpThread = null;
     
+    private double throughputDown = 0;
+    private double throughputUp = 0;
+    
     public void initServer(){
         if(tcpThread!=null){
             if(tcpThread.isAlive()){
@@ -312,6 +315,9 @@ public class MainFrm extends javax.swing.JFrame {
             udpThread = new Thread(this::watchCat);
             udpThread.setName("WatchCat_Thread");
             udpThread.start();
+            Thread chip = new Thread(this::watchChip);
+            chip.setName("WatchChip_Thread");
+            chip.start();
             log("[*]Server listening....");
         }catch(IOException ex){
             log("[#]Error:Server can't start!");
@@ -321,7 +327,7 @@ public class MainFrm extends javax.swing.JFrame {
     
     private void watchDog() {
         log("..."+Thread.currentThread().getName()+" waiting for commands!");
-        while(true){
+        while(running){
             try{
                 Socket clientSocket = commandSocket.accept();
                 InputStream inputStream = clientSocket.getInputStream();
@@ -365,9 +371,11 @@ public class MainFrm extends javax.swing.JFrame {
     private void watchCat() {
         log("..."+Thread.currentThread().getName()+" waiting for Streaming!");
         recivePacket = new DatagramPacket(imageData, imageData.length);
-        while(true){
+        while(running){
             try{
                 this.streamingSocket.receive(recivePacket);
+                ////
+                this.throughputDown+=recivePacket.getLength();
                 for(StreamGroup group: streamers){
                     if(group.getHost().getAddr().equals(recivePacket.getAddress())){
                         if(group.getHost().getPort()==recivePacket.getPort()){
@@ -378,6 +386,8 @@ public class MainFrm extends javax.swing.JFrame {
                                 System.out.println(c.toString());
                                 sendPacket = new DatagramPacket(recivePacket.getData(), recivePacket.getData().length,c.getAddr(),c.getPort());
                                 streamingSocket.send(sendPacket);
+                                //////
+                                this.throughputUp+= sendPacket.getLength();
                             }
                             
                         }
@@ -398,6 +408,21 @@ public class MainFrm extends javax.swing.JFrame {
         return clients.stream()
                 .anyMatch((client) -> (client.getAddr().equals(clientSocket.getInetAddress())
                         &&client.getId().equals(idClient)));
+    }
+    
+    private void watchChip() {
+         log("..."+Thread.currentThread().getName()+" checking data stream!");
+         while(running){
+             try{
+                this.throughputDown = 0;
+                this.throughputUp = 0;
+                Thread.sleep(1000);
+                lbDownload.setText(Double.toString(this.throughputDown/1000));
+                lbUpload.setText(Double.toString(this.throughputUp/1000));
+             }catch(InterruptedException ex){
+                 ex.printStackTrace();
+             }
+         }
     }
     
     private void closeServer() {

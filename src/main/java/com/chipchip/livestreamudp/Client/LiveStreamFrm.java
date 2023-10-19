@@ -87,7 +87,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
             try{
                 this.onMessage();
             }catch(IOException ex){
-                ex.printStackTrace();
+//                ex.printStackTrace();
             }
         };
         new Thread(onMessage).start();
@@ -120,7 +120,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
             try{
                 this.onMessage();
             }catch(IOException ex){
-                ex.printStackTrace();
+//                ex.printStackTrace();
             }
         };
         new Thread(onMessage).start();
@@ -242,6 +242,8 @@ public class LiveStreamFrm extends javax.swing.JFrame {
 
     private void btnSendMessageActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSendMessageActionPerformed
         // TODO add your handling code here:
+        if(txtMessage.getText().equals(""))
+            return;
         try{
             String content = this.clientFrm.getUserName()+":"+this.txtMessage.getText();
             String idGroup = this.HostWatchID==null?this.clientFrm.idClinet:this.HostWatchID;

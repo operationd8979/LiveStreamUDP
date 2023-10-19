@@ -73,9 +73,11 @@ public class ClientFrm extends javax.swing.JFrame {
     }
     
     public final void initFrm(){
+        this.running = false;
         try{
             if(UDPSocket!=null){
-                UDPSocket.close();
+                if(!UDPSocket.isClosed())
+                    UDPSocket.close();
                 UDPSocket = null;
             }
             this.portUDP = -1;
@@ -84,14 +86,14 @@ public class ClientFrm extends javax.swing.JFrame {
         }
         try{
             if(ChatSocket!=null){
-                ChatSocket.close();
+                if(!ChatSocket.isClosed())
+                    ChatSocket.close();
                 ChatSocket = null;
                 inputStream = null;
             }
         }catch(Exception ex){
             JOptionPane.showMessageDialog(null, ex.getMessage());
         }
-        this.running = false;
         this.idClinet = "FFFFFFF";
         this.txtID.setText(idClinet);
         this.txtName.setEditable(!running);
@@ -213,7 +215,8 @@ public class ClientFrm extends javax.swing.JFrame {
         if(this.btnAction.getText().equals(CONNECT)){
             if(!txtName.getText().equals("")&&txtName.getText()!=null){
                 connect();
-                refreshLiveList();
+                if(this.running)
+                    refreshLiveList();
             }
         }
         else{
@@ -345,12 +348,12 @@ public class ClientFrm extends javax.swing.JFrame {
         this.running = true;
         UDPSocket = openSocketUDP();
         if(UDPSocket==null){
-            disconnect();
+            initFrm();
             return;
         }
         String responseTCP = sendGetRequest(Command.CONNECT+"@"+UDPSocket.getLocalPort(),"");
         if(!responseTCP.startsWith("OK")){
-            disconnect();
+            initFrm();
             return;
         }
         this.idClinet = responseTCP.trim().split("@")[1];
@@ -363,24 +366,8 @@ public class ClientFrm extends javax.swing.JFrame {
     }
     
     private void disconnect() {
-        this.running = false;
-        try{
-            String response = sendGetRequest(Command.EXIST,"");
-            if(!response.equals("OK")){
-                //Server error response disconnect!
-                //////////////////////////
-//                System.out.println("Error: "+response);
-                //////////////////////////
-            }
-            if(UDPSocket!=null){
-                UDPSocket.close();
-                UDPSocket = null;
-            }
-            this.portUDP = -1;
-            initFrm();
-        }catch(Exception ex){
-            JOptionPane.showMessageDialog(null, ex.getMessage());
-        }
+        sendGetRequest(Command.EXIST,"");
+        initFrm();
     }
     
     public void refreshLiveList() {
