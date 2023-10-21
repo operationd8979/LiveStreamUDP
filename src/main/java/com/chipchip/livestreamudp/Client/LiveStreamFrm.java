@@ -81,6 +81,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
             }
             if(webcam != null)
                 webcam.close();
+            Thread.currentThread().interrupt();
         };
         new Thread(liveStream).start();
         Runnable onMessage = () -> {

@@ -410,7 +410,8 @@ public class ClientFrm extends javax.swing.JFrame {
                         String response = sendGetRequest(Command.WATCH_LIVE,live.getHost().getId());
                         if(response.equals(Command.OK)){
                             clientFrmRef.setVisible(false);
-                            new LiveStreamFrm(clientFrmRef,live.getHost().getId()).setVisible(true);
+//                            new LiveStreamFrm(clientFrmRef,live.getHost().getId()).setVisible(true);
+                            new LiveStreamPTPFrm(clientFrmRef,live.getHost().getId()).setVisible(true);
                         }
                         else{
                             JOptionPane.showMessageDialog(null, "Error: không link được live stream.");

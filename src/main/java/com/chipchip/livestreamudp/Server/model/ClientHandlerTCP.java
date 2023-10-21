@@ -59,7 +59,7 @@ public class ClientHandlerTCP implements Runnable {
                     outputStream.flush();
                     break;
                 case Command.LIVE:
-                    this.mainFrm.addLiveGroup(this.idClient, this.payLoad, outputStream);
+                    this.mainFrm.addLiveGroup(this.idClient, this.payLoad, this.clientSocket);
                     outputStream.write(Command.OK.getBytes());
                     outputStream.flush();
                     break;
@@ -78,7 +78,7 @@ public class ClientHandlerTCP implements Runnable {
                     }
                     break;
                 case Command.WATCH_LIVE:
-                    if(this.mainFrm.linkStream(this.idClient, this.payLoad, outputStream)==1){
+                    if(this.mainFrm.linkStream(this.idClient, this.payLoad, clientSocket)==1){
                         outputStream.write(Command.OK.getBytes());
                         outputStream.flush();
                     }  

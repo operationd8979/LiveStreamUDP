@@ -5,9 +5,11 @@
  */
 package com.chipchip.livestreamudp.Server.model;
 
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
+import java.net.Socket;
 
 /**
  *
@@ -18,7 +20,8 @@ public class Client implements Serializable{
     private final String id;
     private final InetAddress addr;
     private final int port;
-    public OutputStream os;
+    public Socket clientSocket;
+    public Client link = null;
     
     public Client(String id, InetAddress addr, int port){
         this.id = id;

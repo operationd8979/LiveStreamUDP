@@ -16,5 +16,11 @@
             <artifactId>webcam-capture</artifactId>
             <version>0.3.12</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jitsi/ice4j -->
+        <dependency>
+            <groupId>org.jitsi</groupId>
+            <artifactId>ice4j</artifactId>
+            <version>3.0-66-g1c60acc</version>
+        </dependency>
     </dependencies>
 </project>
