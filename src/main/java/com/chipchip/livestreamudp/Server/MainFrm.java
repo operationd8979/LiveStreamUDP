@@ -380,17 +380,13 @@ public class MainFrm extends javax.swing.JFrame {
                             byteArrayInputStream = new ByteArrayInputStream(recivePacket.getData());
                             group.setCurrentImage(ImageIO.read(byteArrayInputStream));
                             ////////////////
-                            for(Map.Entry<String,DatagramPacket> entry : group.getMapDatagramPacket().entrySet()){
-//                                System.out.println(c.toString());
-//                                sendPacket = new DatagramPacket(recivePacket.getData(), recivePacket.getData().length,c.getAddr(),c.getPort());
-                                sendPacket = entry.getValue();
-                                sendPacket.setData(recivePacket.getData());
-                                sendPacket.setLength(recivePacket.getData().length);
+                            for(Map.Entry<String,Client> entry : group.getMapDatagramPacket().entrySet()){
+                                Client client = entry.getValue();
+                                sendPacket = new DatagramPacket(recivePacket.getData(), recivePacket.getLength(),client.getAddr(),client.getPort());
                                 streamingSocket.send(sendPacket);
                                 //////
                                 this.throughputUp+= sendPacket.getLength();
                             }
-                            
                         }
                     }
                     
@@ -564,8 +560,7 @@ public class MainFrm extends javax.swing.JFrame {
             Client client =clients.stream().filter(c->c.getId().equals(clientId)).findFirst().orElse(null);
             if(client != null){
                 client.clientSocket = clientSocket;
-                DatagramPacket clientDatagramPacket = new DatagramPacket("chip".getBytes(),4,client.getAddr(),client.getPort());
-                streamGroup.addDataPacket(clientId,clientDatagramPacket);
+                streamGroup.addDataPacket(clientId,client);
                 streamGroup.addViewer(client);
                 this.lbLineU.setText(Integer.toString(Integer.parseInt(lbLineU.getText())+1));
                 return 1;
@@ -625,6 +620,7 @@ public class MainFrm extends javax.swing.JFrame {
 //                this.pnLiveStream.add(button);
         this.pnLiveStream.revalidate();
         this.pnLiveStream.repaint();
+        Thread.currentThread().interrupt();
     }
     
     public int removeLiveGroup(String clientId,String name) throws IOException{
@@ -694,6 +690,8 @@ public class MainFrm extends javax.swing.JFrame {
             return;
         }
         for(int i = 0; i< length-1; i=i+2){
+            boolean sd1 = false;
+            boolean sd2 = false;
             Client bigGuy = groupStream.getViewers().get(i);
             Client smallGuy = groupStream.getViewers().get(i+1);
             String SDP1 = null;
@@ -718,27 +716,35 @@ public class MainFrm extends javax.swing.JFrame {
                 //trade SDP
                 bigGuy.clientSocket.getOutputStream().write((SERVER+"@"+SDPDES+"@"+SDP2).getBytes());
                 log("sent SDP to client to be host!");
-                smallGuy.clientSocket.getOutputStream().write((SERVER+"@"+SDPDES+"@"+SDP1).getBytes());
-                log("sent SDP to client to be client!");
-                //wait done response
+                buffer1 = new byte[1024];
                 if ((bytesRead1 = bigGuy.clientSocket.getInputStream().read(buffer1)) != -1) {
                     String response = new String(buffer1, 0, bytesRead1);
-                    if(response.equals("OK"))
+                    if(response.equals("OK")){
                         log("Host clinet is ready!");
+                        sd1 = true;
+                    }
                 }
+                smallGuy.clientSocket.getOutputStream().write((SERVER+"@"+SDPDES+"@"+SDP1).getBytes());
+                log("sent SDP to client to be client!");
+                buffer2 = new byte[1024];
+                //wait done response
                 if ((bytesRead2 = smallGuy.clientSocket.getInputStream().read(buffer2)) != -1) {
                     String response = new String(buffer2, 0, bytesRead2);
-                    if(response.equals("OK"))
+                    if(response.equals("OK")){
                         log("Client clinet is ready!");
+                        sd2 = true;
+                    }
                 }
                 //RUN punch hole NAT
-                bigGuy.clientSocket.getOutputStream().write((SERVER+"@"+UP).getBytes());
-                log("sent SDP to client to be host!");
-                smallGuy.clientSocket.getOutputStream().write((SERVER+"@"+DOWN).getBytes());
-                log("sent SDP to client to be client!");
-                //Link
-                bigGuy.link = smallGuy;
-                groupStream.removeDataPacket(smallGuy.getId());
+                if(sd1&&sd2){
+                    bigGuy.clientSocket.getOutputStream().write((SERVER+"@"+UP).getBytes());
+                    log("sent SDP to client to be host!");
+                    smallGuy.clientSocket.getOutputStream().write((SERVER+"@"+DOWN).getBytes());
+                    log("sent SDP to client to be client!");
+                    //Link
+                    bigGuy.link = smallGuy;
+                    groupStream.removeDataPacket(smallGuy.getId());
+                }
             }catch (IOException ex){
 
             }

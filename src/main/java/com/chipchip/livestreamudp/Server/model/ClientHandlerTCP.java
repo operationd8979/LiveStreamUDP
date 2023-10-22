@@ -96,7 +96,6 @@ public class ClientHandlerTCP implements Runnable {
                     outputStream.write(Command.UNKNOW_COMMAND.getBytes());     
             }
             if(!(this.commnad.equals(Command.LIVE)||this.commnad.equals(Command.WATCH_LIVE))){
-                System.out.println("closed client socket");
                 this.clientSocket.close();
             }  
         } catch (IOException ex) {

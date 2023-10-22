@@ -31,45 +31,46 @@ public class LiveStreamFrm extends javax.swing.JFrame {
 
     private boolean running = false;
     private ClientFrm clientFrm;
-    
+
     private Webcam webcam = null;
-    private String HostWatchID = null;    
-    
+    private String HostWatchID = null;
+
     private BufferedImage bm = null;
     private ImageIcon img =  null;
-    
+
     static DatagramPacket sendPacket = null;
     ByteArrayOutputStream byteArrayOutputStream = null;
-    
+
     static DatagramPacket recivePacket = null;
     ByteArrayInputStream byteArrayInputStream = null;
-    
+
     static byte[] imageData = new byte[65507];
-    
+
 
     public LiveStreamFrm(ClientFrm clientFrm) {
         this.clientFrm = clientFrm;
         initComponents();
+        this.jLabel1.setText(this.clientFrm.getUserName());
         this.running = true;
+        this.txtChat.setEditable(false);
         this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         this.webcam = Webcam.getDefault();
-        
+
         webcam.open();
-        
+
         bm = this.webcam.getImage();
         img =  new ImageIcon(bm);
-        this.jpStreaming.setIcon(img);    
-        
+        this.jpStreaming.setIcon(img);
+
         Runnable liveStream = () -> {
             while (running) {
                 byteArrayOutputStream = new ByteArrayOutputStream();
                 bm = this.webcam.getImage();
-//                img = new ImageIcon(bm);
                 img = new ImageIcon(new ImageIcon(bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
                 //417x438
                 this.jpStreaming.setIcon(img);
                 try {
-                    ImageIO.write(bm, "png", byteArrayOutputStream);
+                    ImageIO.write(bm, "jpeg", byteArrayOutputStream);
                     imageData = byteArrayOutputStream.toByteArray();
                     sendPacket = new DatagramPacket(imageData,imageData.length,InetAddress.getByName(ClientFrm.IPServer),ClientFrm.portUDPServer);
                     this.clientFrm.getUDPSocket().send(sendPacket);
@@ -93,7 +94,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
         };
         new Thread(onMessage).start();
     }
-    
+
     public LiveStreamFrm(ClientFrm clientFrm, String HostWatchID) {
         this.clientFrm = clientFrm;
         this.HostWatchID = HostWatchID;
@@ -126,7 +127,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
         };
         new Thread(onMessage).start();
     }
-    
+
     private void onMessage() throws IOException{
         if(this.clientFrm.ChatSocket!=null){
             Socket socket = this.clientFrm.ChatSocket;
@@ -180,37 +181,37 @@ public class LiveStreamFrm extends javax.swing.JFrame {
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(txtMessage, javax.swing.GroupLayout.PREFERRED_SIZE, 563, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(btnSendMessage, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jpStreaming, javax.swing.GroupLayout.PREFERRED_SIZE, 417, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 244, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 92, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(23, Short.MAX_VALUE))
+                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addComponent(txtMessage, javax.swing.GroupLayout.PREFERRED_SIZE, 563, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(18, 18, 18)
+                                                .addComponent(btnSendMessage, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addComponent(jpStreaming, javax.swing.GroupLayout.PREFERRED_SIZE, 417, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(18, 18, 18)
+                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 244, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(jLabel1, javax.swing.GroupLayout.PREFERRED_SIZE, 92, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                .addContainerGap(23, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(14, 14, 14)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 419, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jpStreaming, javax.swing.GroupLayout.PREFERRED_SIZE, 438, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(txtMessage)
-                    .addComponent(btnSendMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 70, Short.MAX_VALUE))
-                .addContainerGap(42, Short.MAX_VALUE))
+                layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addGap(14, 14, 14)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addComponent(jLabel1)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 419, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addComponent(jpStreaming, javax.swing.GroupLayout.PREFERRED_SIZE, 438, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                        .addComponent(txtMessage)
+                                        .addComponent(btnSendMessage, javax.swing.GroupLayout.DEFAULT_SIZE, 70, Short.MAX_VALUE))
+                                .addContainerGap(42, Short.MAX_VALUE))
         );
 
         pack();
@@ -237,7 +238,7 @@ public class LiveStreamFrm extends javax.swing.JFrame {
                 }
             }
         }
-            
+
         this.dispose();
     }//GEN-LAST:event_formWindowClosing
 
@@ -251,43 +252,11 @@ public class LiveStreamFrm extends javax.swing.JFrame {
             this.clientFrm.sendGetRequest(Command.CHAT, idGroup+"@"+content);
             this.txtMessage.setText("");
         }catch(Exception ex){
-            
+
         }
-        
+
     }//GEN-LAST:event_btnSendMessageActionPerformed
 
-
-//    public static void main(String args[]) {
-//        /* Set the Nimbus look and feel */
-//        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-//        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-//         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-//         */
-//        try {
-//            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-//                if ("Nimbus".equals(info.getName())) {
-//                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-//                    break;
-//                }
-//            }
-//        } catch (ClassNotFoundException ex) {
-//            java.util.logging.Logger.getLogger(LiveStreamFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-//        } catch (InstantiationException ex) {
-//            java.util.logging.Logger.getLogger(LiveStreamFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-//        } catch (IllegalAccessException ex) {
-//            java.util.logging.Logger.getLogger(LiveStreamFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-//        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-//            java.util.logging.Logger.getLogger(LiveStreamFrm.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-//        }
-//        //</editor-fold>
-//
-//        /* Create and display the form */
-//        java.awt.EventQueue.invokeLater(new Runnable() {
-//            public void run() {
-//                new LiveStreamFrm().setVisible(true);
-//            }
-//        });
-//    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnSendMessage;

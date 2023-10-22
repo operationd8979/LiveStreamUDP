@@ -37,7 +37,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
 
     private String HostWatchID = null;
 
-    private BufferedImage bm = null;
+    public BufferedImage bm = null;
     private ImageIcon img =  null;
 
     //punch hole
@@ -62,6 +62,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
         this.clientFrm = clientFrm;
         this.HostWatchID = HostWatchID;
         initComponents();
+        this.txtChat.setEditable(false);
         this.running = true;
         this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
@@ -77,13 +78,14 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
     public void watchLiveStream() {
         this.recivePacket = new DatagramPacket(imageData, imageData.length);
         System.out.println("running watch");
-        while (this.running) {
+        while (this.running&&!this.puchHoleEnable) {
+            System.out.println("Watching...........");
             try{
                 this.clientFrm.getUDPSocket().receive(recivePacket);
                 this.byteArrayInputStream = new ByteArrayInputStream(recivePacket.getData());
                 this.bm = ImageIO.read(byteArrayInputStream);
             }catch(IOException ex){
-//                    ex.printStackTrace();
+                    ex.printStackTrace();
             }
             this.img = new ImageIcon(new ImageIcon(bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
             //417x438
@@ -103,7 +105,9 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
                     if ((bytesRead = inputStream.read(buffer)) != -1){
                         String contentChat = new String(buffer, 0, bytesRead);
                         if(contentChat.startsWith("SERVER")){
+                            System.out.println("get "+contentChat.substring(6,9));
                             handleRequestServer(contentChat);
+                            System.out.println("done "+contentChat.substring(6,9));
                         }
                         else{
                             this.txtChat.append(contentChat+"\n");
@@ -124,9 +128,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
         String DOWN = "DOWN";
         String[] arrayString = requestServer.split("@");
         String command = arrayString[1];
-        System.out.println("SERVER REQUEST: "+command);
         OutputStream outputStream = this.clientFrm.ChatSocket.getOutputStream();
-        InputStream inputStream = this.clientFrm.ChatSocket.getInputStream();
         if(command.equals(SENDSDP)){
             //send local SDP
             this.agent = new Agent();
@@ -136,7 +138,9 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
                     TransportAddress ta = new TransportAddress(InetAddress.getByName(hostname), 3478, Transport.UDP);
                     // Currently Ice4J only supports UDP and will throw an Error otherwise
                     this.agent.addCandidateHarvester(new StunCandidateHarvester(ta));
-                } catch (Exception e) { e.printStackTrace();}
+                } catch (Exception e) {
+                    //e.printStackTrace();
+                }
             }
             IceMediaStream stream = agent.createMediaStream("chip");
             int port = 1234; // Choose any port
@@ -163,28 +167,26 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
             stateListener = new StateListener(true,bm);
             agent.addStateChangeListener(stateListener);
             this.puchHoleEnable = true;
-            this.handleOpenPTP(true);
             agent.startConnectivityEstablishment();
+            this.handleOpenPTP(true);
         }
         if(command.equals(DOWN)){
             //start punch hole download
-            stateListener = new StateListener(false);
+            stateListener = new StateListener(false,bm);
             agent.addStateChangeListener(stateListener);
             this.puchHoleEnable = true;
-            this.handleOpenPTP(false);
             agent.startConnectivityEstablishment();
+            this.handleOpenPTP(false);
         }
-
-//        byte[] buffer = new byte[1024];
-//        int bytesRead;
-//        while ((bytesRead = inputStream.read(buffer)) != -1) {
-//            String request = new String(buffer, 0, bytesRead);
-//        }
 
     }
 
     private void handleOpenPTP(boolean host){
         this.WatchLiveThread.interrupt();
+        while(!this.WatchLiveThread.isInterrupted()){
+        }
+        this.WatchLiveThread = null;
+        System.out.println("STOPED thread");
         if(host){
             this.WatchLiveThread = new Thread(this::handleUPPTP);
         }
@@ -196,7 +198,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
 
     private void handleUPPTP(){
         this.recivePacket = new DatagramPacket(imageData, imageData.length);
-        System.out.println("running watch");
+        System.out.println("running up");
         while (this.running) {
             try{
                 this.clientFrm.getUDPSocket().receive(recivePacket);
@@ -206,19 +208,24 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
             }catch(IOException ex){
 //                    ex.printStackTrace();
             }
-            this.img = new ImageIcon(new ImageIcon(bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
+            this.img = new ImageIcon(new ImageIcon(this.bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
             //417x438
             this.jpStreaming.setIcon(img);
+//            System.out.println("aaaaa "+this.stateListener.bufferedImage);
         }
         this.WatchLiveThread.interrupt();
     }
 
     private void handleDownPTP(){
+        System.out.println("running down");
         while (this.running){
+//            System.out.println("aaaaa "+this.stateListener.bufferedImage);
             this.bm = this.stateListener.bufferedImage;
-            this.img = new ImageIcon(new ImageIcon(bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
+            if(this.bm != null){
+                this.img = new ImageIcon(new ImageIcon(this.bm).getImage().getScaledInstance(417, 438, Image.SCALE_DEFAULT));
+                this.jpStreaming.setIcon(img);
+            }
             //417x438
-            this.jpStreaming.setIcon(img);
         }
         this.WatchLiveThread.interrupt();
     }

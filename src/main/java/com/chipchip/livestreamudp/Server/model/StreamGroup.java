@@ -24,7 +24,8 @@ public class StreamGroup {
     private final String name;
     private List<Client> viewers;
 
-    private Map<String,DatagramPacket> mapDatagramPacket;
+    private Map<String,Client> mapDatagramPacket;
+
     private BufferedImage currentImage = null;
     public Socket socketHost = null;
     
@@ -44,7 +45,7 @@ public class StreamGroup {
         return this.viewers;
     }
 
-    public Map<String,DatagramPacket> getMapDatagramPacket(){
+    public Map<String,Client> getMapDatagramPacket(){
         return this.mapDatagramPacket;
     }
     
@@ -52,14 +53,18 @@ public class StreamGroup {
         this.viewers.add(client);
     }
 
-    public DatagramPacket addDataPacket(String clientID,DatagramPacket datagramPacket){
-        this.mapDatagramPacket.put(clientID,datagramPacket);
-        return datagramPacket;
+    public Client addDataPacket(String clientID,Client client){
+        this.mapDatagramPacket.put(clientID,client);
+        return client;
     }
 
     public String removeDataPacket(String clientID){
-        this.mapDatagramPacket.remove(clientID);
-        return clientID;
+        if (this.mapDatagramPacket.containsKey(clientID)) {
+            this.mapDatagramPacket.remove(clientID);
+            return clientID;
+        } else {
+            return null;
+        }
     }
     public String getName() {
         return this.name;
