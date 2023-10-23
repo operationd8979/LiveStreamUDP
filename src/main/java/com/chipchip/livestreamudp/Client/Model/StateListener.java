@@ -23,6 +23,8 @@ public class StateListener implements PropertyChangeListener {
     public int port;
     public BufferedImage bufferedImage = null;
     public final boolean host;
+    public int length = -1;
+    public boolean running = true;
 
 
 
@@ -57,10 +59,10 @@ public class StateListener implements PropertyChangeListener {
 
                         if(!host){
                             DatagramPacket recivePacket = new DatagramPacket(new byte[1500],1500);
-                            while (true){
+                            while (running){
                                 int packetSize = 1400; // Kích thước gói tin tùy chỉnh, phải khớp với phần gửi
-                                byte[] receivedData = new byte[65507]; // Đủ lớn để chứa toàn bộ hình ảnh
-                                byte[] receivedSizePacket = new byte[10];
+                                byte[] receivedData = new byte[60000]; // Đủ lớn để chứa toàn bộ hình ảnh
+                                byte[] receivedSizePacket = new byte[1400];
                                 DatagramPacket totalPacketsPacket = new DatagramPacket(receivedSizePacket, receivedSizePacket.length);
                                 try{
                                     UDP.receive(totalPacketsPacket);
@@ -68,7 +70,8 @@ public class StateListener implements PropertyChangeListener {
                                     ex.printStackTrace();
                                 }
                                 int totalPackets = Integer.parseInt(new String(totalPacketsPacket.getData()).trim());
-                                System.out.println(totalPackets);
+                                if(totalPackets>4)
+                                    System.out.println(totalPackets);
                                 try{
                                     for (int packetNumber = 0; packetNumber < totalPackets; packetNumber++) {
                                         DatagramPacket receivePacket = new DatagramPacket(new byte[packetSize], packetSize);
@@ -83,10 +86,11 @@ public class StateListener implements PropertyChangeListener {
                                     //
                                     //bufferedImage = ImageIO.read(new ByteArrayInputStream(recivePacket.getData()));
                                     this.bufferedImage = ImageIO.read(new ByteArrayInputStream(receivedData));
-                                    //System.out.println(bufferedImage);
                                 }catch (IIOException ex){
 
                                 }catch (IOException ex){
+                                    ex.printStackTrace();
+                                }catch (Exception ex){
                                     ex.printStackTrace();
                                 }
                             }
@@ -95,7 +99,7 @@ public class StateListener implements PropertyChangeListener {
                             DatagramPacket sendPacket = new DatagramPacket(new byte[1500],1500);
                             sendPacket.setAddress(hostname);
                             sendPacket.setPort(port);
-                            while(true){
+                            while(running){
                                 try{
                                     int packetSize = 1400; // Kích thước gói tin tùy chỉnh, có thể điều chỉnh
                                     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -103,11 +107,18 @@ public class StateListener implements PropertyChangeListener {
                                     ImageIO.write(bufferedImage, "jpeg", byteArrayOutputStream);
 
                                     byte[] imageData = byteArrayOutputStream.toByteArray();
+                                    if(length == imageData.length){
+                                        continue;
+                                    }
                                     int totalPackets = (int)Math.ceil((double)imageData.length / packetSize);
+                                    if(totalPackets>40)
+                                        continue;
+                                    this.length = imageData.length;
+
 
                                     byte[] totalByte = Integer.toString(totalPackets).getBytes();
                                     UDP.send(new DatagramPacket(totalByte,totalByte.length,hostname,port));
-                                    System.out.println(totalPackets);
+                                    System.out.println(imageData.length);
 
                                     for (int packetNumber = 0; packetNumber < totalPackets; packetNumber++) {
                                         int offset = packetNumber * packetSize;
@@ -116,8 +127,8 @@ public class StateListener implements PropertyChangeListener {
                                         sendPacket = new DatagramPacket(packetData, packetData.length, hostname, port);
                                         UDP.send(sendPacket);
 //                                        System.out.println("Sent packet " + (packetNumber + 1) + " of " + totalPackets);
+                                        //System.out.println(sendPacket.getLength());
                                     }
-                                    //System.out.println(bufferedImage);
                                 }catch(IOException ex){
                                     ex.printStackTrace();
                                 }

@@ -89,6 +89,18 @@ public class ClientHandlerTCP implements Runnable {
                         outputStream.flush();
                     }  
                     break;
+                case Command.OFF_WATCH_P2PUP:
+                    if(this.mainFrm.unLinkP2PStream(this.idClient, this.payLoad, true)==1){
+                        outputStream.write(Command.OK.getBytes());
+                        outputStream.flush();
+                    }
+                    break;
+                case Command.OFF_WATCH_P2PDOWN:
+                    if(this.mainFrm.unLinkP2PStream(this.idClient, this.payLoad, false)==1){
+                        outputStream.write(Command.OK.getBytes());
+                        outputStream.flush();
+                    }
+                    break;
                 case Command.CHAT:
                     this.mainFrm.onSendChat(this.payLoad,this.payLoad2);
                     break;

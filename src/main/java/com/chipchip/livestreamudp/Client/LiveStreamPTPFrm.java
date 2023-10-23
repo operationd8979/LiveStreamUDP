@@ -79,7 +79,6 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
         this.recivePacket = new DatagramPacket(imageData, imageData.length);
         System.out.println("running watch");
         while (this.running&&!this.puchHoleEnable) {
-            System.out.println("Watching...........");
             try{
                 this.clientFrm.getUDPSocket().receive(recivePacket);
                 this.byteArrayInputStream = new ByteArrayInputStream(recivePacket.getData());
@@ -99,7 +98,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
             Socket socket = this.clientFrm.ChatSocket;
             try{
                 InputStream inputStream = socket.getInputStream();
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[2048];
                 int bytesRead;
                 while(this.running){
                     if ((bytesRead = inputStream.read(buffer)) != -1){
@@ -126,6 +125,8 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
         String SDPDES = "SDPDES";
         String UP = "UP";
         String DOWN = "DOWN";
+        String P2POFFDOWN = "P2POFFDOWN";
+        String P2POFFUP = "P2POFFUP";
         String[] arrayString = requestServer.split("@");
         String command = arrayString[1];
         OutputStream outputStream = this.clientFrm.ChatSocket.getOutputStream();
@@ -148,6 +149,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
             try{
                 String toSend = this.createSDPDescription(agent);
                 outputStream.write(toSend.getBytes());
+                outputStream.flush();
             }catch(Throwable throwable){
                 throwable.printStackTrace();
             }
@@ -158,6 +160,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
             try {
                 this.parseSDP(this.agent, remoteSDP); // This will add the remote information to the agent.
                 outputStream.write("OK".getBytes());
+                outputStream.flush();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -177,6 +180,23 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
             this.puchHoleEnable = true;
             agent.startConnectivityEstablishment();
             this.handleOpenPTP(false);
+        }
+        if(command.equals(P2POFFUP)){
+            this.puchHoleEnable = false;
+            this.stateListener.running = false;
+            this.stateListener = null;
+            this.agent = null;
+            this.WatchLiveThread = new Thread(this::watchLiveStream);
+            this.WatchLiveThread.start();
+        }
+        if(command.equals(P2POFFDOWN)){
+            this.puchHoleEnable = false;
+            this.stateListener.running = false;
+            this.stateListener = null;
+            this.agent.free();
+            this.agent = null;
+            this.WatchLiveThread = new Thread(this::watchLiveStream);
+            this.WatchLiveThread.start();
         }
 
     }
@@ -199,7 +219,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
     private void handleUPPTP(){
         this.recivePacket = new DatagramPacket(imageData, imageData.length);
         System.out.println("running up");
-        while (this.running) {
+        while (this.running&&this.puchHoleEnable) {
             try{
                 this.clientFrm.getUDPSocket().receive(recivePacket);
                 this.byteArrayInputStream = new ByteArrayInputStream(recivePacket.getData());
@@ -218,7 +238,7 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
 
     private void handleDownPTP(){
         System.out.println("running down");
-        while (this.running){
+        while (this.running&&this.puchHoleEnable){
 //            System.out.println("aaaaa "+this.stateListener.bufferedImage);
             this.bm = this.stateListener.bufferedImage;
             if(this.bm != null){
@@ -449,7 +469,21 @@ public class LiveStreamPTPFrm extends javax.swing.JFrame {
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
         // TODO add your handling code here:
         this.running = false;
-        this.clientFrm.sendGetRequest(Command.OFF_WATCH,HostWatchID);
+
+        if(this.puchHoleEnable){
+            if(this.stateListener.host){
+                this.clientFrm.sendGetRequest(Command.OFF_WATCH_P2PUP,HostWatchID);
+            }
+            else{
+                this.clientFrm.sendGetRequest(Command.OFF_WATCH_P2PDOWN,HostWatchID);
+            }
+        }
+        else{
+            this.clientFrm.sendGetRequest(Command.OFF_WATCH,HostWatchID);
+        }
+
+        this.puchHoleEnable = false;
+
         if( this.clientFrm.ChatSocket!=null){
             try{
                 this.clientFrm.ChatSocket.close();

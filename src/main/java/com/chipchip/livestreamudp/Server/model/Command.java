@@ -16,6 +16,8 @@ public class Command {
     public final static String WATCH_LIVE = "WATCH_LIVE";
     public final static String OFF_STREAM = "OFF_STREAM";
     public final static String OFF_WATCH = "OFF_WATCH";
+    public final static String OFF_WATCH_P2PUP = "OFF_WATCH_P2PUP";
+    public final static String OFF_WATCH_P2PDOWN = "OFF_WATCH_P2PDOWN";
     public final static String GET_LIST_STREAM = "GET_LIST_STREAM";
     public final static String CHAT = "CHAT";
     public final static String EXIST = "EXIST";

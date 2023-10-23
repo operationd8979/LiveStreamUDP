@@ -43,7 +43,7 @@ import javax.swing.JPanel;
  */
 public class ClientFrm extends javax.swing.JFrame {
     
-    public static final String IPServer = "localhost";
+    public static final String IPServer = "25.14.203.251";
     public static final int portTCPServer = 12345;
     public static final int portUDPServer = 12346;
 
